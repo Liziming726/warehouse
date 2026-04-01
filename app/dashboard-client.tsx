@@ -341,14 +341,14 @@ export default function DashboardClient({
       ),
     },
     {
-      title: 'Created At',
+      title: '创建时间',
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 200,
       render: (text) => formatDate(String(text)),
     },
     {
-      title: 'Actions',
+      title: '操作',
       key: 'actions',
       width: 170,
       render: (_, row) => (
@@ -403,7 +403,7 @@ export default function DashboardClient({
         <Alert
           type="warning"
           showIcon
-          message="Missing warehouse column"
+          title="Missing warehouse column"
           description='Please add "warehouse" column to products table to enable warehouse-based permissions.'
         />
       ) : null}
@@ -412,7 +412,7 @@ export default function DashboardClient({
         <Alert
           type="error"
           showIcon
-          message="No warehouse assignment"
+          title="No warehouse assignment"
           description="Your account has no warehouse assignment. Please contact admin."
         />
       ) : null}
@@ -421,7 +421,7 @@ export default function DashboardClient({
         <Alert
           type="warning"
           showIcon
-          message="Missing quantity column"
+          title="Missing quantity column"
           description='Please add "quantity" column to products table to enable inventory metrics.'
         />
       ) : null}
@@ -430,7 +430,7 @@ export default function DashboardClient({
         <Alert
           type="error"
           showIcon
-          message="Failed to load products"
+          title="Failed to load products"
           description={loadErrorMessage}
         />
       ) : null}
@@ -439,7 +439,7 @@ export default function DashboardClient({
         <Alert
           type="error"
           showIcon
-          message={`缺货提醒: ${noInventoryRows.length}`}
+          title={`缺货提醒: ${noInventoryRows.length}`}
           description={noInventoryRows
             .slice(0, 5)
             .map((row) => `产品代码：${row.sku || '(no sku)'} - 产品名称：${row.name || '(no name)'}`)
@@ -451,7 +451,7 @@ export default function DashboardClient({
         <Alert
           type="warning"
           showIcon
-          message={`低库存提醒: ${lowInventoryRows.length}`}
+          title={`低库存提醒: ${lowInventoryRows.length}`}
           description={lowInventoryRows
             .slice(0, 5)
             .map((row) => `产品代码：${row.sku || '(no sku)'} - 库存数量：${row.quantity ?? 0}`)

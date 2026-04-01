@@ -278,7 +278,7 @@ export default async function HomePage() {
             gap: 12,
           }}
         >
-          <Space direction="vertical" size={2}>
+          <Space orientation="vertical" size={2}>
             <h1 style={{ margin: 0 }}>仓库管理系统</h1>
             <Space size="small" wrap>
               <Tag color={access.isAdmin ? 'gold' : 'blue'}>
