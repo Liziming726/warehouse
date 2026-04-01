@@ -1,16 +1,17 @@
 "use client";
 
-import { useActionState } from "react";
+import { Suspense, useActionState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button, Card, Input } from "antd";
 import Text from "antd/es/typography/Text";
 import { login } from "./actions";
 
+
 const initialLoginState = {
   error: null,
 };
 
-export default function LoginPage() {
+function LoginForm() {
   const searchParams = useSearchParams();
   const next = searchParams.get("next") || "/";
   const redirectTo =
@@ -67,5 +68,13 @@ export default function LoginPage() {
         </form>
       </Card>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
   );
 }
