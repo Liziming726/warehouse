@@ -297,15 +297,15 @@ export default function DashboardClient({
   };
 
   const columns: ColumnsType<ProductView> = [
-    { title: 'SKU', dataIndex: 'sku', key: 'sku', width: 140 },
-    { title: 'Name', dataIndex: 'name', key: 'name', width: 180 },
-    { title: 'Category', dataIndex: 'category', key: 'category', width: 140 },
-    { title: 'Unit', dataIndex: 'unit', key: 'unit', width: 100 },
+    { title: '产品代码', dataIndex: 'sku', key: 'sku', width: 140 },
+    { title: '产品名称', dataIndex: 'name', key: 'name', width: 180 },
+    { title: '产品类别', dataIndex: 'category', key: 'category', width: 140 },
+    { title: '单位', dataIndex: 'unit', key: 'unit', width: 100 },
   ];
 
   if (hasWarehouseColumn) {
     columns.push({
-      title: 'Warehouse',
+      title: '所属仓库',
       dataIndex: 'warehouse',
       key: 'warehouse',
       width: 140,
@@ -314,24 +314,24 @@ export default function DashboardClient({
 
   columns.push(
     {
-      title: 'Quantity',
+      title: '库存数量',
       key: 'quantity',
       width: 100,
       render: (_, row) =>
         hasQuantityColumn ? (row.quantity === null ? '--' : row.quantity) : '--',
     },
     {
-      title: 'Status',
+      title: '状态',
       key: 'status',
       width: 120,
       render: (_, row) => (
         <Tag
           color={
-            row.status === 'Normal'
+            row.status === '正常'
               ? 'green'
-              : row.status === 'Low Stock'
+              : row.status === '低库存'
               ? 'orange'
-              : row.status === 'Out of Stock'
+              : row.status === '缺货'
               ? 'red'
               : 'default'
           }
@@ -354,7 +354,7 @@ export default function DashboardClient({
       render: (_, row) => (
         <Space>
           <Button size="small" onClick={() => openEditModal(row)}>
-            Edit
+            编辑
           </Button>
           <Popconfirm
             title="Confirm delete"
@@ -364,7 +364,7 @@ export default function DashboardClient({
             onConfirm={() => handleDelete(row.id)}
           >
             <Button size="small" danger>
-              Delete
+              删除
             </Button>
           </Popconfirm>
         </Space>
@@ -379,22 +379,22 @@ export default function DashboardClient({
       <Row gutter={16}>
         <Col xs={24} sm={12} lg={6}>
           <Card>
-            <Statistic title="Total Categories" value={totalCategories} />
+            <Statistic title="总类别" value={totalCategories} />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
           <Card>
-            <Statistic title="Total Quantity" value={totalQuantity ?? '--'} />
+            <Statistic title="总数量" value={totalQuantity ?? '--'} />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
           <Card>
-            <Statistic title="Low Inventory" value={lowInventoryRows.length} />
+            <Statistic title="低库存" value={lowInventoryRows.length} />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
           <Card>
-            <Statistic title="Out of Stock" value={noInventoryRows.length} />
+            <Statistic title="缺货" value={noInventoryRows.length} />
           </Card>
         </Col>
       </Row>
@@ -439,10 +439,10 @@ export default function DashboardClient({
         <Alert
           type="error"
           showIcon
-          message={`Out of stock alerts: ${noInventoryRows.length}`}
+          message={`缺货提醒: ${noInventoryRows.length}`}
           description={noInventoryRows
             .slice(0, 5)
-            .map((row) => `${row.sku || '(no sku)'} - ${row.name || '(no name)'}`)
+            .map((row) => `产品代码：${row.sku || '(no sku)'} - 产品名称：${row.name || '(no name)'}`)
             .join(' | ')}
         />
       ) : null}
@@ -451,10 +451,10 @@ export default function DashboardClient({
         <Alert
           type="warning"
           showIcon
-          message={`Low stock alerts: ${lowInventoryRows.length}`}
+          message={`低库存提醒: ${lowInventoryRows.length}`}
           description={lowInventoryRows
             .slice(0, 5)
-            .map((row) => `${row.sku || '(no sku)'} qty: ${row.quantity ?? 0}`)
+            .map((row) => `产品代码：${row.sku || '(no sku)'} - 库存数量：${row.quantity ?? 0}`)
             .join(' | ')}
         />
       ) : null}
@@ -488,7 +488,7 @@ export default function DashboardClient({
                 onClick={openCreateModal}
                 disabled={!canWriteInScope}
               >
-                Add Product
+                添加产品
               </Button>
             </Col>
           </Row>
@@ -507,7 +507,7 @@ export default function DashboardClient({
 
       <Modal
         open={createOpen}
-        title="Add Product"
+        title="添加产品"
         onCancel={() => setCreateOpen(false)}
         onOk={handleCreate}
         confirmLoading={isPending}
@@ -520,28 +520,28 @@ export default function DashboardClient({
       >
         <Form form={createForm} layout="vertical">
           <Form.Item
-            label="SKU"
+            label="产品代码"
             name="sku"
             rules={[{ required: true, message: 'Please input SKU' }]}
           >
             <Input />
           </Form.Item>
           <Form.Item
-            label="Name"
+            label="产品名称"
             name="name"
             rules={[{ required: true, message: 'Please input name' }]}
           >
             <Input />
           </Form.Item>
-          <Form.Item label="Category" name="category">
+          <Form.Item label="产品类别" name="category">
             <Input />
           </Form.Item>
-          <Form.Item label="Unit" name="unit">
+          <Form.Item label="单位" name="unit">
             <Input />
           </Form.Item>
           {hasWarehouseColumn ? (
             <Form.Item
-              label="Warehouse"
+              label="所属仓库"
               name="warehouse"
               rules={
                 canManageAllWarehouses
@@ -559,7 +559,7 @@ export default function DashboardClient({
               />
             </Form.Item>
           ) : null}
-          <Form.Item label="Quantity" name="quantity">
+          <Form.Item label="库存数量" name="quantity">
             <InputNumber
               style={{ width: '100%' }}
               min={0}
@@ -572,7 +572,7 @@ export default function DashboardClient({
 
       <Modal
         open={editOpen}
-        title="Edit Product"
+        title="编辑产品"
         onCancel={() => {
           setEditOpen(false);
           setEditingRow(null);
@@ -588,28 +588,28 @@ export default function DashboardClient({
       >
         <Form form={editForm} layout="vertical">
           <Form.Item
-            label="SKU"
+            label="产品代码"
             name="sku"
             rules={[{ required: true, message: 'Please input SKU' }]}
           >
             <Input />
           </Form.Item>
           <Form.Item
-            label="Name"
+            label="产品名称"
             name="name"
             rules={[{ required: true, message: 'Please input name' }]}
           >
             <Input />
           </Form.Item>
-          <Form.Item label="Category" name="category">
+          <Form.Item label="产品类别" name="category">
             <Input />
           </Form.Item>
-          <Form.Item label="Unit" name="unit">
+          <Form.Item label="单位" name="unit">
             <Input />
           </Form.Item>
           {hasWarehouseColumn ? (
             <Form.Item
-              label="Warehouse"
+              label="所属仓库"
               name="warehouse"
               rules={
                 canManageAllWarehouses
@@ -627,7 +627,7 @@ export default function DashboardClient({
               />
             </Form.Item>
           ) : null}
-          <Form.Item label="Quantity" name="quantity">
+          <Form.Item label="库存数量" name="quantity">
             <InputNumber
               style={{ width: '100%' }}
               min={0}
