@@ -294,7 +294,7 @@ export default async function HomePage() {
 
           <form action={logout}>
             <Button htmlType="submit" danger>
-              登出 ({access.username})
+              登出 ({access.nickname})
             </Button>
           </form>
         </div>

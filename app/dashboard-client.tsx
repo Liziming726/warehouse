@@ -220,13 +220,13 @@ export default function DashboardClient({
       startTransition(async () => {
         try {
           await addProduct(toFormData(payload));
-          messageApi.success('Product added');
+          messageApi.success('增加产品成功');
           createForm.resetFields();
           setCreateOpen(false);
           router.refresh();
         } catch (error) {
           messageApi.error(
-            error instanceof Error ? error.message : 'Failed to add product'
+            error instanceof Error ? error.message : '增加产品失败'
           );
         }
       });
@@ -265,13 +265,13 @@ export default function DashboardClient({
       startTransition(async () => {
         try {
           await updateProduct(toFormData(payload, editingRow.id));
-          messageApi.success('Product updated');
+          messageApi.success('更新产品成功');
           setEditOpen(false);
           setEditingRow(null);
           router.refresh();
         } catch (error) {
           messageApi.error(
-            error instanceof Error ? error.message : 'Failed to update product'
+            error instanceof Error ? error.message : '更新产品失败'
           );
         }
       });
@@ -286,11 +286,11 @@ export default function DashboardClient({
         const formData = new FormData();
         formData.set('id', id);
         await deleteProduct(formData);
-        messageApi.success('Product deleted');
+        messageApi.success('删除产品成功');
         router.refresh();
       } catch (error) {
         messageApi.error(
-          error instanceof Error ? error.message : 'Failed to delete product'
+          error instanceof Error ? error.message : '删除产品失败'
         );
       }
     });
@@ -357,10 +357,10 @@ export default function DashboardClient({
             编辑
           </Button>
           <Popconfirm
-            title="Confirm delete"
-            description={`Delete ${row.sku || row.name || 'this product'}?`}
-            okText="Delete"
-            cancelText="Cancel"
+            title="确认删除"
+            description={`确定删除 ${row.name || row.sku || 'this product'}?`}
+            okText="删除"
+            cancelText="取消"
             onConfirm={() => handleDelete(row.id)}
           >
             <Button size="small" danger>
@@ -466,7 +466,7 @@ export default function DashboardClient({
               <Space wrap style={{ width: '100%' }} size={12}>
                 <Input
                   allowClear
-                  placeholder="Search SKU, name, category, unit, or warehouse"
+                  placeholder="搜索产品代码、名称、类别、单位"
                   value={keyword}
                   onChange={(event) => setKeyword(event.target.value)}
                   style={{ width: isMobile ? '100%' : 320 }}
