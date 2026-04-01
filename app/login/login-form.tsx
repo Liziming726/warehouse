@@ -18,30 +18,30 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
 
   return (
     <div style={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
-      <Card title="仓库管理系统" style={{ width: 360 }}>
+      <Card title="Warehouse Login" style={{ width: 360 }}>
         <form action={formAction} style={{ display: "grid", gap: 12 }}>
           <input type="hidden" name="redirectTo" value={redirectTo} />
 
           <label>
-            <Text strong>用户名</Text>
+            <Text strong>Username</Text>
             <Input
               name="username"
               type="text"
               inputMode="numeric"
               pattern="[0-9]*"
               autoComplete="username"
-              placeholder="请输入手机号"
+              placeholder="Enter username"
               required
             />
           </label>
 
           <label>
-            <Text strong>密码</Text>
+            <Text strong>Password</Text>
             <Input.Password
               name="password"
               inputMode="numeric"
               pattern="[0-9]*"
-              placeholder="请输入密码"
+              placeholder="Enter password"
               autoComplete="current-password"
               required
             />
