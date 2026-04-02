@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useState, useTransition } from 'react';
 import {
   Alert,
   Button,
@@ -15,6 +15,7 @@ import {
   message,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import useBreakpoint from 'antd/es/grid/hooks/useBreakpoint';
 import { useRouter } from 'next/navigation';
 import { createOutbound } from '@/app/outbound/actions';
 import type {
@@ -65,25 +66,48 @@ export default function OutboundClient({
   recentRows,
   loadErrorMessage,
 }: OutboundClientProps) {
+  const screens = useBreakpoint();
+  const isMobile = !screens.md;
   const [messageApi, contextHolder] = message.useMessage();
   const [form] = Form.useForm<OutboundFormValues>();
   const [isPending, startTransition] = useTransition();
   const [keyword, setKeyword] = useState('');
   const router = useRouter();
+  const selectedWarehouseId = Form.useWatch('warehouseId', form);
 
-  const canSubmit =
-    !loadErrorMessage &&
-    products.length > 0 &&
-    (access.isAdmin ? warehouses.length > 0 : !!access.warehouseId);
+  const effectiveWarehouseId = access.isAdmin
+    ? selectedWarehouseId
+    : access.warehouseId ?? undefined;
+
+  const filteredProducts = useMemo(() => {
+    if (!effectiveWarehouseId) {
+      return access.isAdmin ? [] : products;
+    }
+
+    return products.filter(
+      (product) => product.warehouseId === effectiveWarehouseId
+    );
+  }, [access.isAdmin, effectiveWarehouseId, products]);
 
   const productOptions = useMemo(
     () =>
-      products.map((product) => ({
+      filteredProducts.map((product) => ({
         value: product.id,
         label: `${product.sku} | ${product.name}`,
       })),
-    [products]
+    [filteredProducts]
   );
+
+  const canSelectProduct = access.isAdmin
+    ? !!effectiveWarehouseId
+    : !!access.warehouseId;
+
+  const canSubmit =
+    !loadErrorMessage &&
+    filteredProducts.length > 0 &&
+    (access.isAdmin
+      ? warehouses.length > 0 && !!effectiveWarehouseId
+      : !!access.warehouseId);
 
   const warehouseOptions = useMemo(
     () =>
@@ -116,50 +140,50 @@ export default function OutboundClient({
 
   const columns: ColumnsType<MovementRow> = [
     {
-      title: 'Biz Date',
+      title: '业务日期',
       dataIndex: 'bizDate',
       key: 'bizDate',
       width: 120,
     },
     {
-      title: 'Movement No',
+      title: '流水号',
       dataIndex: 'movementNo',
       key: 'movementNo',
       width: 220,
     },
     {
-      title: 'Product',
+      title: '产品',
       key: 'product',
       width: 240,
       render: (_, row) => `${row.sku} | ${row.productName}`,
     },
     {
-      title: 'Quantity',
+      title: '数量',
       key: 'quantity',
       width: 120,
       render: (_, row) => `${row.quantity} ${row.unit}`,
     },
     {
-      title: 'Warehouse',
+      title: '仓库',
       dataIndex: 'warehouseName',
       key: 'warehouseName',
       width: 180,
     },
     {
-      title: 'Operator',
+      title: '操作人',
       dataIndex: 'operatorName',
       key: 'operatorName',
       width: 140,
     },
     {
-      title: 'Created At',
+      title: '创建时间',
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 180,
       render: (text) => formatDateTime(String(text)),
     },
     {
-      title: 'Remark',
+      title: '备注',
       dataIndex: 'remark',
       key: 'remark',
       width: 260,
@@ -172,6 +196,14 @@ export default function OutboundClient({
 
   const defaultBizDate = new Date().toISOString().slice(0, 10);
 
+  useEffect(() => {
+    if (!access.isAdmin) {
+      return;
+    }
+
+    form.setFieldValue('productId', undefined);
+  }, [access.isAdmin, form, selectedWarehouseId]);
+
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
@@ -183,7 +215,7 @@ export default function OutboundClient({
       startTransition(async () => {
         try {
           await createOutbound(toFormData(payload));
-          messageApi.success('Outbound record created.');
+          messageApi.success('出库记录创建成功。');
           form.resetFields();
           form.setFieldsValue({
             bizDate: defaultBizDate,
@@ -193,7 +225,7 @@ export default function OutboundClient({
           router.refresh();
         } catch (error) {
           messageApi.error(
-            error instanceof Error ? error.message : 'Failed to create outbound record.'
+            error instanceof Error ? error.message : '创建出库记录失败。'
           );
         }
       });
@@ -203,19 +235,19 @@ export default function OutboundClient({
   };
 
   return (
-    <Space direction="vertical" size="large" style={{ width: '100%' }}>
+    <Space orientation="vertical" size="large" style={{ width: '100%' }}>
       {contextHolder}
 
       <Card>
-        <Space direction="vertical" size={6} style={{ width: '100%' }}>
+        <Space orientation="vertical" size={6} style={{ width: '100%' }}>
           <Typography.Title level={4} style={{ margin: 0 }}>
-            Outbound
+            出库登记
           </Typography.Title>
           <Typography.Text type="secondary">
-            Current user: {access.nickname ?? access.username} | Scope:{' '}
+            当前用户：{access.nickname ?? access.username} | 数据范围：
             {access.isAdmin
-              ? 'All warehouses'
-              : access.warehouseName ?? 'Warehouse not assigned'}
+              ? '全部仓库'
+              : access.warehouseName ?? '未分配仓库'}
           </Typography.Text>
         </Space>
       </Card>
@@ -224,7 +256,7 @@ export default function OutboundClient({
         <Alert
           type="error"
           showIcon
-          message="Failed to load outbound page data"
+          message="出库页面数据加载失败"
           description={loadErrorMessage}
         />
       ) : null}
@@ -233,12 +265,23 @@ export default function OutboundClient({
         <Alert
           type="warning"
           showIcon
-          message="No products available"
-          description="Please create products and bind them to a warehouse first."
+          message="暂无可用产品"
+          description="请先到“库存”页的“产品管理”中新增产品。"
         />
       ) : null}
 
-      <Card title="Create Outbound Record">
+      {access.isAdmin &&
+      !!effectiveWarehouseId &&
+      filteredProducts.length === 0 ? (
+        <Alert
+          type="warning"
+          showIcon
+          message="当前仓库暂无可用产品"
+          description="请先到“库存”页的“产品管理”中为该仓库新增产品。"
+        />
+      ) : null}
+
+      <Card title="新增出库记录">
         <Form
           form={form}
           layout="vertical"
@@ -249,51 +292,60 @@ export default function OutboundClient({
           }}
         >
           <Form.Item
-            label="Product"
-            name="productId"
-            rules={[{ required: true, message: 'Please select a product.' }]}
-          >
-            <Select
-              showSearch
-              optionFilterProp="label"
-              placeholder="Select product"
-              options={productOptions}
-            />
-          </Form.Item>
-
-          <Form.Item
-            label="Warehouse"
+            label="仓库"
             name="warehouseId"
             rules={
               access.isAdmin
-                ? [{ required: true, message: 'Please select a warehouse.' }]
+                ? [{ required: true, message: '请选择仓库。' }]
                 : undefined
             }
           >
             <Select
-              placeholder="Select warehouse"
+              placeholder="请选择仓库"
               options={warehouseOptions}
               disabled={!access.isAdmin}
+              style={{ width: '100%' }}
             />
           </Form.Item>
 
           <Form.Item
-            label="Quantity"
+            label="产品"
+            name="productId"
+            rules={[{ required: true, message: '请选择产品。' }]}
+          >
+            <Select
+              showSearch
+              optionFilterProp="label"
+              placeholder={
+                !canSelectProduct
+                  ? '请先选择仓库'
+                  : filteredProducts.length === 0
+                  ? '该仓库暂无可选产品'
+                  : '请选择产品'
+              }
+              options={productOptions}
+              disabled={!canSelectProduct || filteredProducts.length === 0}
+              style={{ width: '100%' }}
+            />
+          </Form.Item>
+
+          <Form.Item
+            label="数量"
             name="quantity"
-            rules={[{ required: true, message: 'Please input quantity.' }]}
+            rules={[{ required: true, message: '请输入数量。' }]}
           >
             <InputNumber min={0.01} step={1} style={{ width: '100%' }} />
           </Form.Item>
 
           <Form.Item
-            label="Business Date"
+            label="业务日期"
             name="bizDate"
-            rules={[{ required: true, message: 'Please select business date.' }]}
+            rules={[{ required: true, message: '请选择业务日期。' }]}
           >
             <Input type="date" />
           </Form.Item>
 
-          <Form.Item label="Remark" name="remark">
+          <Form.Item label="备注" name="remark">
             <Input.TextArea rows={3} maxLength={500} />
           </Form.Item>
 
@@ -303,21 +355,22 @@ export default function OutboundClient({
             onClick={handleSubmit}
             loading={isPending}
             disabled={!canSubmit}
+            style={isMobile ? { width: '100%' } : undefined}
           >
-            Submit Outbound
+            提交出库
           </Button>
         </Form>
       </Card>
 
       <Card
-        title="Recent Outbound Records"
+        title="最近出库记录"
         extra={
           <Input
             allowClear
             value={keyword}
             onChange={(event) => setKeyword(event.target.value)}
-            placeholder="Search by movement/product/warehouse"
-            style={{ width: 280 }}
+            placeholder="搜索流水号、产品、仓库"
+            style={{ width: isMobile ? '100%' : 280 }}
           />
         }
       >
@@ -326,11 +379,11 @@ export default function OutboundClient({
           columns={columns}
           dataSource={rows}
           loading={isPending}
+          size={isMobile ? 'small' : 'middle'}
           scroll={{ x: 1300 }}
-          pagination={{ pageSize: 10 }}
+          pagination={{ pageSize: isMobile ? 8 : 10 }}
         />
       </Card>
     </Space>
   );
 }
-

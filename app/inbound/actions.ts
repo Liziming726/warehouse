@@ -25,7 +25,7 @@ function revalidateInventoryPages() {
 
 function mapInboundRpcError(message: string) {
   if (message.includes('duplicate key')) {
-    return 'Failed to create inbound movement: movement number conflict.';
+    return '创建入库记录失败：流水号冲突。';
   }
   return message;
 }
@@ -61,4 +61,3 @@ export async function createInbound(formData: FormData) {
 
   revalidateInventoryPages();
 }
-

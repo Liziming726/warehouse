@@ -1,5 +1,4 @@
 import { redirect } from 'next/navigation';
-import { Space, Typography } from 'antd';
 import { createClient } from '@/src/lib/supabase/server';
 import {
   InventorySchemaError,
@@ -15,7 +14,7 @@ import type {
   WarehouseOption,
 } from '@/src/lib/inventory/types';
 import { isUnauthorizedError } from '@/src/lib/auth/access';
-import WmsNav from '@/src/components/wms-nav';
+import WmsShell from '@/src/components/wms-shell';
 import OutboundClient from '@/app/outbound/outbound-client';
 
 export default async function OutboundPage() {
@@ -51,27 +50,24 @@ export default async function OutboundPage() {
     } else if (error instanceof Error) {
       loadErrorMessage = error.message;
     } else {
-      loadErrorMessage = 'Unknown error while loading outbound page.';
+      loadErrorMessage = '加载出库页面时发生未知错误。';
     }
   }
 
   return (
-    <div style={{ padding: 24, maxWidth: 1280, margin: '0 auto' }}>
-      <Space orientation="vertical" size="large" style={{ width: '100%' }}>
-        <Space orientation="vertical" size={2}>
-          <h2>记录出库操作</h2>
-        </Space>
-
-        <WmsNav currentPath="/outbound" />
-
-        <OutboundClient
-          access={access}
-          products={products}
-          warehouses={warehouses}
-          recentRows={recentRows}
-          loadErrorMessage={loadErrorMessage}
-        />
-      </Space>
-    </div>
+    <WmsShell
+      title="出库管理"
+      subtitle="登记出库记录，并在提交时自动校验库存。"
+      currentPath="/outbound"
+      access={access}
+    >
+      <OutboundClient
+        access={access}
+        products={products}
+        warehouses={warehouses}
+        recentRows={recentRows}
+        loadErrorMessage={loadErrorMessage}
+      />
+    </WmsShell>
   );
 }

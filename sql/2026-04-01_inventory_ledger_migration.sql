@@ -91,21 +91,40 @@ begin
   end if;
 end $$;
 
+-- If this migration is re-run, stock_movements may already reference app_users_pkey.
+-- Drop that FK first so app_users primary key can be reshaped safely.
+do $$
+begin
+  if to_regclass('public.stock_movements') is not null then
+    alter table public.stock_movements
+      drop constraint if exists stock_movements_operator_user_id_fkey;
+  end if;
+end $$;
+
 do $$
 declare
   v_pk_name text;
+  v_is_target_pk boolean;
 begin
-  select c.conname
-  into v_pk_name
+  select
+    c.conname,
+    (
+      array_length(c.conkey, 1) = 1
+      and (
+        select a.attname
+        from pg_attribute a
+        where a.attrelid = c.conrelid
+          and a.attnum = c.conkey[1]
+      ) = 'id'
+    ) as is_target_pk
+  into v_pk_name, v_is_target_pk
   from pg_constraint c
   where c.conrelid = 'public.app_users'::regclass
     and c.contype = 'p'
   limit 1;
 
-  if v_pk_name is not null and v_pk_name <> 'app_users_pkey' then
+  if v_pk_name is not null and not coalesce(v_is_target_pk, false) then
     execute format('alter table public.app_users drop constraint %I', v_pk_name);
-  elsif v_pk_name = 'app_users_pkey' then
-    alter table public.app_users drop constraint app_users_pkey;
   end if;
 end $$;
 
@@ -117,12 +136,36 @@ do $$
 begin
   if not exists (
     select 1
+    from pg_constraint c
+    where c.conrelid = 'public.app_users'::regclass
+      and c.contype = 'p'
+      and array_length(c.conkey, 1) = 1
+      and (
+        select a.attname
+        from pg_attribute a
+        where a.attrelid = c.conrelid
+          and a.attnum = c.conkey[1]
+      ) = 'id'
+  ) then
+    if exists (
+      select 1
+      from pg_constraint
+      where conname = 'app_users_pkey'
+        and conrelid = 'public.app_users'::regclass
+    ) then
+      alter table public.app_users drop constraint app_users_pkey;
+    end if;
+
+    alter table public.app_users
+      add constraint app_users_pkey primary key (id);
+  elsif not exists (
+    select 1
     from pg_constraint
     where conname = 'app_users_pkey'
       and conrelid = 'public.app_users'::regclass
   ) then
-    alter table public.app_users
-      add constraint app_users_pkey primary key (id);
+    -- If PK is already on id but has another name, keep it as-is.
+    null;
   end if;
 end $$;
 
@@ -261,6 +304,22 @@ create table if not exists public.stock_movements (
   void_reason text,
   created_at timestamptz not null default now()
 );
+
+do $$
+begin
+  if to_regclass('public.stock_movements') is not null then
+    if not exists (
+      select 1
+      from pg_constraint
+      where conname = 'stock_movements_operator_user_id_fkey'
+        and conrelid = 'public.stock_movements'::regclass
+    ) then
+      alter table public.stock_movements
+        add constraint stock_movements_operator_user_id_fkey
+        foreign key (operator_user_id) references public.app_users(id);
+    end if;
+  end if;
+end $$;
 
 create index if not exists idx_stock_movements_biz_date
   on public.stock_movements(biz_date desc);
@@ -521,4 +580,3 @@ left join public.warehouses w on w.id = sm.warehouse_id
 left join public.app_users u on u.id = sm.operator_user_id;
 
 commit;
-

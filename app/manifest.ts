@@ -2,8 +2,8 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Warehouse WMS',
-    short_name: 'WMS',
+    name: '仓库管理系统',
+    short_name: '仓管系统',
     description: '仓库管理系统',
     start_url: '/login',
     display: 'standalone',
@@ -15,3 +15,4 @@ export default function manifest(): MetadataRoute.Manifest {
     ],
   };
 }
+

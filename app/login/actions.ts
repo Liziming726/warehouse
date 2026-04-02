@@ -33,25 +33,25 @@ function getSafeRedirectTarget(target: string) {
 
 function getFriendlyLoginErrorMessage(error: unknown) {
   if (!(error instanceof Error)) {
-    return 'Server error occurred during login. Please try again.';
+    return '登录时发生服务端错误，请稍后重试。';
   }
 
   if (
     error.message.includes('APP_SESSION_SECRET') ||
     error.message.includes('SESSION_SECRET')
   ) {
-    return 'Server is missing APP_SESSION_SECRET. Please configure it in environment variables.';
+    return '服务端缺少 APP_SESSION_SECRET，请先配置环境变量。';
   }
 
   if (error.message.includes('NEXT_PUBLIC_SUPABASE_URL')) {
-    return 'Server is missing NEXT_PUBLIC_SUPABASE_URL. Please configure it in environment variables.';
+    return '服务端缺少 NEXT_PUBLIC_SUPABASE_URL，请先配置环境变量。';
   }
 
   if (error.message.includes('Supabase publishable key')) {
-    return 'Server is missing Supabase publishable key. Please configure NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY.';
+    return '服务端缺少 Supabase Publishable Key，请配置 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY。';
   }
 
-  return 'Server error occurred during login. Please try again.';
+  return '登录时发生服务端错误，请稍后重试。';
 }
 
 export async function login(
@@ -67,13 +67,12 @@ export async function login(
   );
 
   if (!usernameRaw || !passwordRaw) {
-    return { error: 'Please enter both username and password.' };
+    return { error: '请输入用户名和密码。' };
   }
 
   if (!username || !password) {
     return {
-      error:
-        'Current database schema requires numeric username/password (bigint).',
+      error: '当前数据库要求用户名和密码为纯数字。',
     };
   }
 
@@ -88,12 +87,12 @@ export async function login(
     if (error) {
       console.error('[login] Supabase query failed:', error);
       return {
-        error: 'Login query failed in Supabase.',
+        error: '登录查询失败，请检查数据库权限配置。',
       };
     }
 
     if (!usersByUsername?.length) {
-      return { error: 'Username does not exist.' };
+      return { error: '用户名不存在。' };
     }
 
     const matchedUser = usersByUsername.find(
@@ -101,7 +100,7 @@ export async function login(
     );
 
     if (!matchedUser) {
-      return { error: 'Password is incorrect.' };
+      return { error: '密码不正确。' };
     }
 
     const warehouseRaw =
@@ -111,7 +110,7 @@ export async function login(
     const warehouse = warehouseRaw.trim() || null;
 
     if (!matchedUser.is_admin && !warehouse) {
-      return { error: 'Your account is not assigned to a warehouse.' };
+      return { error: '当前账号未分配仓库，请联系管理员。' };
     }
 
     const cookieStore = await cookies();

@@ -24,6 +24,20 @@ export type ProductOption = {
   warehouseName: string | null;
 };
 
+export type ProductManageRow = {
+  id: string;
+  sku: string;
+  name: string;
+  category: string;
+  unit: string;
+  safeStock: number;
+  warehouseId: string | null;
+  warehouseName: string;
+  status: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type MovementType = 'IN' | 'OUT';
 
 export type MovementRow = {
@@ -58,4 +72,3 @@ export type InventoryRow = {
   currentQty: number;
   stockStatus: 'NORMAL' | 'LOW_STOCK' | 'OUT_OF_STOCK' | string;
 };
-

@@ -7,13 +7,26 @@ function normalizeText(value: FormDataEntryValue | null) {
   return String(value ?? '').trim();
 }
 
+function toFieldLabel(fieldName: string) {
+  if (fieldName === 'productId') {
+    return '产品';
+  }
+  if (fieldName === 'warehouseId') {
+    return '仓库';
+  }
+  if (fieldName === 'quantity') {
+    return '数量';
+  }
+  return fieldName;
+}
+
 export function parseUuid(
   value: FormDataEntryValue | null,
   fieldName: string
 ): string {
   const text = normalizeText(value);
   if (!UUID_RE.test(text)) {
-    throw new Error(`${fieldName} is invalid.`);
+    throw new Error(`${toFieldLabel(fieldName)}格式不正确。`);
   }
   return text;
 }
@@ -27,7 +40,7 @@ export function parseOptionalUuid(
     return null;
   }
   if (!UUID_RE.test(text)) {
-    throw new Error(`${fieldName} is invalid.`);
+    throw new Error(`${toFieldLabel(fieldName)}格式不正确。`);
   }
   return text;
 }
@@ -39,7 +52,7 @@ export function parsePositiveQuantity(
   const text = normalizeText(value);
   const quantity = Number(text);
   if (!Number.isFinite(quantity) || quantity <= 0) {
-    throw new Error(`${fieldName} must be greater than 0.`);
+    throw new Error(`${toFieldLabel(fieldName)}必须大于 0。`);
   }
   return Math.round(quantity * 100) / 100;
 }
@@ -51,12 +64,12 @@ export function parseBizDate(value: FormDataEntryValue | null) {
   }
 
   if (!DATE_RE.test(text)) {
-    throw new Error('bizDate format is invalid.');
+    throw new Error('业务日期格式不正确。');
   }
 
   const date = new Date(`${text}T00:00:00Z`);
   if (!Number.isFinite(date.getTime())) {
-    throw new Error('bizDate format is invalid.');
+    throw new Error('业务日期格式不正确。');
   }
 
   return text;
@@ -82,4 +95,3 @@ export function toOperatorUserId(value: string) {
 
   return n;
 }
-

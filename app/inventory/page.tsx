@@ -1,19 +1,20 @@
 import { redirect } from 'next/navigation';
-import { Space, Typography } from 'antd';
 import { createClient } from '@/src/lib/supabase/server';
 import {
   InventorySchemaError,
   loadInventoryAccess,
   loadInventoryRows,
+  loadProductManageRows,
   loadWarehouseOptions,
 } from '@/src/lib/inventory/queries';
 import type {
   InventoryAccess,
   InventoryRow,
+  ProductManageRow,
   WarehouseOption,
 } from '@/src/lib/inventory/types';
 import { isUnauthorizedError } from '@/src/lib/auth/access';
-import WmsNav from '@/src/components/wms-nav';
+import WmsShell from '@/src/components/wms-shell';
 import InventoryClient from '@/app/inventory/inventory-client';
 
 export default async function InventoryPage() {
@@ -33,12 +34,14 @@ export default async function InventoryPage() {
   }
 
   let rows: InventoryRow[] = [];
+  let products: ProductManageRow[] = [];
   let warehouses: WarehouseOption[] = [];
   let loadErrorMessage: string | null = null;
 
   try {
-    [rows, warehouses] = await Promise.all([
+    [rows, products, warehouses] = await Promise.all([
       loadInventoryRows(supabase, access),
+      loadProductManageRows(supabase, access),
       loadWarehouseOptions(supabase, access),
     ]);
   } catch (error) {
@@ -47,26 +50,24 @@ export default async function InventoryPage() {
     } else if (error instanceof Error) {
       loadErrorMessage = error.message;
     } else {
-      loadErrorMessage = 'Unknown error while loading inventory page.';
+      loadErrorMessage = '加载库存页面时发生未知错误。';
     }
   }
 
   return (
-    <div style={{ padding: 24, maxWidth: 1280, margin: '0 auto' }}>
-      <Space orientation="vertical" size="large" style={{ width: '100%' }}>
-        <Space orientation="vertical" size={2}>
-          <h2>库存概览</h2>
-        </Space>
-
-        <WmsNav currentPath="/inventory" />
-
-        <InventoryClient
-          access={access}
-          rows={rows}
-          warehouses={warehouses}
-          loadErrorMessage={loadErrorMessage}
-        />
-      </Space>
-    </div>
+    <WmsShell
+      title="库存总览"
+      subtitle="当前库存由入库与出库流水自动汇总生成。"
+      currentPath="/inventory"
+      access={access}
+    >
+      <InventoryClient
+        access={access}
+        rows={rows}
+        products={products}
+        warehouses={warehouses}
+        loadErrorMessage={loadErrorMessage}
+      />
+    </WmsShell>
   );
 }

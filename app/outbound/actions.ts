@@ -25,10 +25,10 @@ function revalidateInventoryPages() {
 
 function mapOutboundRpcError(message: string) {
   if (message.includes('Insufficient stock')) {
-    return 'Insufficient stock for this outbound request.';
+    return '库存不足，无法完成本次出库。';
   }
   if (message.includes('duplicate key')) {
-    return 'Failed to create outbound movement: movement number conflict.';
+    return '创建出库记录失败：流水号冲突。';
   }
   return message;
 }
@@ -64,4 +64,3 @@ export async function createOutbound(formData: FormData) {
 
   revalidateInventoryPages();
 }
-

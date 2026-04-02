@@ -5,6 +5,7 @@ import type {
   InventoryRow,
   MovementRow,
   MovementType,
+  ProductManageRow,
   ProductOption,
   WarehouseOption,
 } from '@/src/lib/inventory/types';
@@ -39,6 +40,19 @@ type ProductRow = {
   warehouse_id?: string | null;
   warehouse?: string | null;
   status?: boolean | null;
+};
+
+type ProductManageDbRow = {
+  id: string;
+  sku: string | null;
+  name: string | null;
+  category: string | null;
+  unit: string | null;
+  safe_stock: number | string | null;
+  warehouse_id: string | null;
+  status: boolean | null;
+  created_at: string | null;
+  updated_at: string | null;
 };
 
 type MovementViewRow = {
@@ -108,13 +122,13 @@ function mapSchemaError(error: QueryError | null) {
 
   if (error.code === '42P01') {
     return new InventorySchemaError(
-      'Inventory tables/views are missing. Run sql/2026-04-01_inventory_ledger_migration.sql first.'
+      '库存相关表或视图不存在，请先执行 sql/2026-04-01_inventory_ledger_migration.sql。'
     );
   }
 
   if (error.code === '42703') {
     return new InventorySchemaError(
-      'Inventory schema is outdated. Run sql/2026-04-01_inventory_ledger_migration.sql first.'
+      '库存库结构版本过旧，请先执行 sql/2026-04-01_inventory_ledger_migration.sql。'
     );
   }
 
@@ -133,7 +147,7 @@ export async function loadInventoryAccess(
     .maybeSingle<AppUserRow>();
 
   if (userById.error) {
-    throw new Error(`Failed to load user profile: ${userById.error.message}`);
+    throw new Error(`加载用户信息失败：${userById.error.message}`);
   }
 
   let row = userById.data;
@@ -147,7 +161,7 @@ export async function loadInventoryAccess(
 
     if (userByUsername.error) {
       throw new Error(
-        `Failed to load user profile: ${userByUsername.error.message}`
+        `加载用户信息失败：${userByUsername.error.message}`
       );
     }
 
@@ -155,7 +169,7 @@ export async function loadInventoryAccess(
   }
 
   if (!row) {
-    throw new Error('Unauthorized');
+    throw new Error('未登录或登录已失效。');
   }
 
   const warehouseId = normalizeText(row.warehouse_id);
@@ -174,7 +188,7 @@ export async function loadInventoryAccess(
         throw schemaError;
       }
       throw new Error(
-        `Failed to load warehouse profile: ${warehouseLookup.error.message}`
+        `加载仓库信息失败：${warehouseLookup.error.message}`
       );
     }
 
@@ -198,19 +212,19 @@ export function resolveWriteWarehouseId(
 ) {
   if (access.isAdmin) {
     if (!requestedWarehouseId) {
-      throw new Error('warehouseId is required for admin operations.');
+      throw new Error('管理员操作必须指定仓库。');
     }
     return requestedWarehouseId;
   }
 
   if (!access.warehouseId) {
     throw new Error(
-      'Your account is not assigned to a warehouse_id. Please ask admin to complete user setup.'
+      '当前账号未分配仓库，请联系管理员完善账号配置。'
     );
   }
 
   if (requestedWarehouseId && requestedWarehouseId !== access.warehouseId) {
-    throw new Error('You can only operate on your assigned warehouse.');
+    throw new Error('你只能操作自己所属仓库的数据。');
   }
 
   return access.warehouseId;
@@ -238,7 +252,7 @@ export async function loadWarehouseOptions(
     if (schemaError) {
       throw schemaError;
     }
-    throw new Error(`Failed to load warehouses: ${error.message}`);
+    throw new Error(`加载仓库列表失败：${error.message}`);
   }
 
   const rows = (data ?? []) as WarehouseRow[];
@@ -270,11 +284,11 @@ export async function loadProductOptions(
         .order('created_at', { ascending: false });
 
       if (legacyQuery.error) {
-        throw new Error(`Failed to load products: ${legacyQuery.error.message}`);
+        throw new Error(`加载产品列表失败：${legacyQuery.error.message}`);
       }
       rows = (legacyQuery.data ?? []) as ProductRow[];
     } else {
-      throw new Error(`Failed to load products: ${primaryQuery.error.message}`);
+      throw new Error(`加载产品列表失败：${primaryQuery.error.message}`);
     }
   } else {
     rows = (primaryQuery.data ?? []) as ProductRow[];
@@ -301,13 +315,91 @@ export async function loadProductOptions(
     .map((row) => ({
       id: row.id,
       sku: normalizeText(row.sku) ?? '-',
-      name: normalizeText(row.name) ?? '(Unnamed Product)',
+      name: normalizeText(row.name) ?? '未命名产品',
       category: normalizeText(row.category) ?? '',
       unit: normalizeText(row.unit) ?? 'pcs',
       warehouseId: normalizeText(row.warehouse_id),
       warehouseName: normalizeText(row.warehouse),
     }))
     .sort((a, b) => `${a.sku} ${a.name}`.localeCompare(`${b.sku} ${b.name}`));
+}
+
+export async function loadProductManageRows(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  access: InventoryAccess
+): Promise<ProductManageRow[]> {
+  let query = supabase
+    .from('products')
+    .select(
+      'id,sku,name,category,unit,safe_stock,warehouse_id,status,created_at,updated_at'
+    )
+    .order('created_at', { ascending: false });
+
+  if (!access.isAdmin) {
+    if (!access.warehouseId) {
+      return [];
+    }
+    query = query.eq('warehouse_id', access.warehouseId);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    const schemaError = mapSchemaError(error);
+    if (schemaError) {
+      throw schemaError;
+    }
+    throw new Error(`加载产品列表失败：${error.message}`);
+  }
+
+  const rows = (data ?? []) as ProductManageDbRow[];
+  const warehouseIds = Array.from(
+    new Set(rows.map((row) => normalizeText(row.warehouse_id)).filter(Boolean))
+  ) as string[];
+
+  const warehouseMap = new Map<string, string>();
+
+  if (warehouseIds.length > 0) {
+    const warehouseResult = await supabase
+      .from('warehouses')
+      .select('id,name')
+      .in('id', warehouseIds);
+
+    if (warehouseResult.error) {
+      const schemaError = mapSchemaError(warehouseResult.error);
+      if (schemaError) {
+        throw schemaError;
+      }
+      throw new Error(
+        `加载仓库名称失败：${warehouseResult.error.message}`
+      );
+    }
+
+    for (const warehouse of warehouseResult.data ?? []) {
+      const id = normalizeText(warehouse.id);
+      const name = normalizeText(warehouse.name);
+      if (id && name) {
+        warehouseMap.set(id, name);
+      }
+    }
+  }
+
+  return rows.map((row) => {
+    const warehouseId = normalizeText(row.warehouse_id);
+    return {
+      id: row.id,
+      sku: normalizeText(row.sku) ?? '-',
+      name: normalizeText(row.name) ?? '未命名产品',
+      category: normalizeText(row.category) ?? '',
+      unit: normalizeText(row.unit) ?? '件',
+      safeStock: toNumber(row.safe_stock),
+      warehouseId,
+      warehouseName:
+        (warehouseId ? warehouseMap.get(warehouseId) : null) ?? '未分配仓库',
+      status: row.status !== false,
+      createdAt: normalizeText(row.created_at) ?? '',
+      updatedAt: normalizeText(row.updated_at) ?? '',
+    };
+  });
 }
 
 export async function loadMovementRows(
@@ -340,7 +432,7 @@ export async function loadMovementRows(
     if (schemaError) {
       throw schemaError;
     }
-    throw new Error(`Failed to load movement rows: ${error.message}`);
+    throw new Error(`加载出入库流水失败：${error.message}`);
   }
 
   const rows = (data ?? []) as MovementViewRow[];
@@ -350,10 +442,10 @@ export async function loadMovementRows(
     movementType: row.movement_type,
     bizDate: normalizeText(row.biz_date) ?? '',
     warehouseId: normalizeText(row.warehouse_id),
-    warehouseName: normalizeText(row.warehouse_name) ?? 'Unassigned',
+    warehouseName: normalizeText(row.warehouse_name) ?? '未分配仓库',
     productId: normalizeText(row.product_id),
     sku: normalizeText(row.sku) ?? '-',
-    productName: normalizeText(row.product_name) ?? '(Unnamed Product)',
+    productName: normalizeText(row.product_name) ?? '未命名产品',
     unit: normalizeText(row.unit) ?? 'pcs',
     quantity: toNumber(row.quantity),
     operatorUserId: normalizeText(row.operator_user_id),
@@ -391,17 +483,17 @@ export async function loadInventoryRows(
     if (schemaError) {
       throw schemaError;
     }
-    throw new Error(`Failed to load inventory rows: ${error.message}`);
+    throw new Error(`加载库存汇总失败：${error.message}`);
   }
 
   const rows = (data ?? []) as InventoryViewRow[];
   return rows.map((row) => ({
     warehouseId: normalizeText(row.warehouse_id),
     warehouseCode: normalizeText(row.warehouse_code) ?? '',
-    warehouseName: normalizeText(row.warehouse_name) ?? 'Unassigned',
+    warehouseName: normalizeText(row.warehouse_name) ?? '未分配仓库',
     productId: row.product_id,
     sku: normalizeText(row.sku) ?? '-',
-    productName: normalizeText(row.product_name) ?? '(Unnamed Product)',
+    productName: normalizeText(row.product_name) ?? '未命名产品',
     category: normalizeText(row.category) ?? '',
     unit: normalizeText(row.unit) ?? 'pcs',
     safeStock: toNumber(row.safe_stock),
@@ -424,21 +516,18 @@ export async function assertProductInWarehouse(
   if (query.error) {
     if (query.error.code === '42P01' || query.error.code === '42703') {
       throw new InventorySchemaError(
-        'Inventory schema is incomplete. Run sql/2026-04-01_inventory_ledger_migration.sql first.'
+        '库存数据库结构不完整，请先执行 sql/2026-04-01_inventory_ledger_migration.sql。'
       );
     }
-    throw new Error(`Failed to validate product: ${query.error.message}`);
+    throw new Error(`校验产品信息失败：${query.error.message}`);
   }
 
   if (!query.data) {
-    throw new Error('Product does not exist.');
+    throw new Error('产品不存在。');
   }
 
   const productWarehouseId = normalizeText(query.data.warehouse_id);
   if (productWarehouseId && productWarehouseId !== warehouseId) {
-    throw new Error(
-      'Selected product does not belong to the selected warehouse.'
-    );
+    throw new Error('所选产品不属于当前仓库。');
   }
 }
-
