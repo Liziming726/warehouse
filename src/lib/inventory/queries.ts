@@ -267,8 +267,10 @@ export async function loadWarehouseOptions(
 
 export async function loadProductOptions(
   supabase: Awaited<ReturnType<typeof createClient>>,
-  access: InventoryAccess
+  _access: InventoryAccess
 ): Promise<ProductOption[]> {
+  void _access;
+
   const primaryQuery = await supabase
     .from('products')
     .select('id,sku,name,category,unit,warehouse_id,status')
@@ -294,22 +296,7 @@ export async function loadProductOptions(
     rows = (primaryQuery.data ?? []) as ProductRow[];
   }
 
-  const filtered = rows.filter((row) => {
-    if (row.status === false) {
-      return false;
-    }
-
-    if (access.isAdmin) {
-      return true;
-    }
-
-    if (access.warehouseId) {
-      return normalizeText(row.warehouse_id) === access.warehouseId;
-    }
-
-    const productWarehouse = normalizeText(row.warehouse);
-    return !!productWarehouse && productWarehouse === access.legacyWarehouse;
-  });
+  const filtered = rows.filter((row) => row.status !== false);
 
   return filtered
     .map((row) => ({
@@ -317,30 +304,25 @@ export async function loadProductOptions(
       sku: normalizeText(row.sku) ?? '-',
       name: normalizeText(row.name) ?? '未命名产品',
       category: normalizeText(row.category) ?? '',
-      unit: normalizeText(row.unit) ?? 'pcs',
-      warehouseId: normalizeText(row.warehouse_id),
-      warehouseName: normalizeText(row.warehouse),
+      unit: normalizeText(row.unit) ?? '件',
+      warehouseId: null,
+      warehouseName: '全部仓库',
     }))
     .sort((a, b) => `${a.sku} ${a.name}`.localeCompare(`${b.sku} ${b.name}`));
 }
 
 export async function loadProductManageRows(
   supabase: Awaited<ReturnType<typeof createClient>>,
-  access: InventoryAccess
+  _access: InventoryAccess
 ): Promise<ProductManageRow[]> {
-  let query = supabase
+  void _access;
+
+  const query = supabase
     .from('products')
     .select(
       'id,sku,name,category,unit,safe_stock,warehouse_id,status,created_at,updated_at'
     )
     .order('created_at', { ascending: false });
-
-  if (!access.isAdmin) {
-    if (!access.warehouseId) {
-      return [];
-    }
-    query = query.eq('warehouse_id', access.warehouseId);
-  }
 
   const { data, error } = await query;
   if (error) {
@@ -352,54 +334,19 @@ export async function loadProductManageRows(
   }
 
   const rows = (data ?? []) as ProductManageDbRow[];
-  const warehouseIds = Array.from(
-    new Set(rows.map((row) => normalizeText(row.warehouse_id)).filter(Boolean))
-  ) as string[];
-
-  const warehouseMap = new Map<string, string>();
-
-  if (warehouseIds.length > 0) {
-    const warehouseResult = await supabase
-      .from('warehouses')
-      .select('id,name')
-      .in('id', warehouseIds);
-
-    if (warehouseResult.error) {
-      const schemaError = mapSchemaError(warehouseResult.error);
-      if (schemaError) {
-        throw schemaError;
-      }
-      throw new Error(
-        `加载仓库名称失败：${warehouseResult.error.message}`
-      );
-    }
-
-    for (const warehouse of warehouseResult.data ?? []) {
-      const id = normalizeText(warehouse.id);
-      const name = normalizeText(warehouse.name);
-      if (id && name) {
-        warehouseMap.set(id, name);
-      }
-    }
-  }
-
-  return rows.map((row) => {
-    const warehouseId = normalizeText(row.warehouse_id);
-    return {
-      id: row.id,
-      sku: normalizeText(row.sku) ?? '-',
-      name: normalizeText(row.name) ?? '未命名产品',
-      category: normalizeText(row.category) ?? '',
-      unit: normalizeText(row.unit) ?? '件',
-      safeStock: toNumber(row.safe_stock),
-      warehouseId,
-      warehouseName:
-        (warehouseId ? warehouseMap.get(warehouseId) : null) ?? '未分配仓库',
-      status: row.status !== false,
-      createdAt: normalizeText(row.created_at) ?? '',
-      updatedAt: normalizeText(row.updated_at) ?? '',
-    };
-  });
+  return rows.map((row) => ({
+    id: row.id,
+    sku: normalizeText(row.sku) ?? '-',
+    name: normalizeText(row.name) ?? '未命名产品',
+    category: normalizeText(row.category) ?? '',
+    unit: normalizeText(row.unit) ?? '件',
+    safeStock: toNumber(row.safe_stock),
+    warehouseId: null,
+    warehouseName: '全部仓库',
+    status: row.status !== false,
+    createdAt: normalizeText(row.created_at) ?? '',
+    updatedAt: normalizeText(row.updated_at) ?? '',
+  }));
 }
 
 export async function loadMovementRows(
@@ -505,13 +452,15 @@ export async function loadInventoryRows(
 export async function assertProductInWarehouse(
   supabase: Awaited<ReturnType<typeof createClient>>,
   productId: string,
-  warehouseId: string
+  _warehouseId: string
 ) {
+  void _warehouseId;
+
   const query = await supabase
     .from('products')
-    .select('id,warehouse_id')
+    .select('id,status')
     .eq('id', productId)
-    .maybeSingle<{ id: string; warehouse_id: string | null }>();
+    .maybeSingle<{ id: string; status: boolean | null }>();
 
   if (query.error) {
     if (query.error.code === '42P01' || query.error.code === '42703') {
@@ -526,8 +475,7 @@ export async function assertProductInWarehouse(
     throw new Error('产品不存在。');
   }
 
-  const productWarehouseId = normalizeText(query.data.warehouse_id);
-  if (productWarehouseId && productWarehouseId !== warehouseId) {
-    throw new Error('所选产品不属于当前仓库。');
+  if (query.data.status === false) {
+    throw new Error('该产品已停用，不能进行出入库操作。');
   }
 }

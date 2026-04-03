@@ -87,9 +87,7 @@ export default function InboundClient({
       return access.isAdmin ? [] : products;
     }
 
-    return products.filter(
-      (product) => product.warehouseId === effectiveWarehouseId
-    );
+    return products;
   }, [access.isAdmin, effectiveWarehouseId, products]);
 
   const productOptions = useMemo(

@@ -10,6 +10,7 @@ import {
   Input,
   InputNumber,
   Modal,
+  Popconfirm,
   Row,
   Select,
   Space,
@@ -23,7 +24,11 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import useBreakpoint from 'antd/es/grid/hooks/useBreakpoint';
 import { useRouter } from 'next/navigation';
-import { createProduct, updateProduct } from '@/app/inventory/actions';
+import {
+  createProduct,
+  deleteProduct,
+  updateProduct,
+} from '@/app/inventory/actions';
 import type {
   InventoryAccess,
   InventoryRow,
@@ -49,7 +54,6 @@ type ProductFormValues = {
   category: string;
   unit: string;
   safeStock: number;
-  warehouseId?: string;
   status: boolean;
 };
 
@@ -119,8 +123,6 @@ export default function InventoryClient({
   const [messageApi, contextHolder] = message.useMessage();
   const router = useRouter();
 
-  const defaultWarehouseId = access.warehouseId ?? warehouses[0]?.id ?? undefined;
-
   const warehouseOptions = useMemo(() => {
     if (!access.isAdmin) {
       return [];
@@ -133,15 +135,6 @@ export default function InventoryClient({
       })),
     ];
   }, [access.isAdmin, warehouses]);
-
-  const productWarehouseOptions = useMemo(
-    () =>
-      warehouses.map((warehouse) => ({
-        label: `${warehouse.name} (${warehouse.code})`,
-        value: warehouse.id,
-      })),
-    [warehouses]
-  );
 
   const warehouseScopedRows = useMemo(() => {
     if (!access.isAdmin || warehouseFilter === ALL_WAREHOUSES) {
@@ -174,7 +167,9 @@ export default function InventoryClient({
     if (!access.isAdmin || warehouseFilter === ALL_WAREHOUSES) {
       return products;
     }
-    return products.filter((row) => row.warehouseId === warehouseFilter);
+    return products.filter(
+      (row) => !row.warehouseId || row.warehouseId === warehouseFilter
+    );
   }, [access.isAdmin, products, warehouseFilter]);
 
   const filteredProducts = useMemo(() => {
@@ -248,10 +243,11 @@ export default function InventoryClient({
       width: 80,
     },
     {
-      title: '所属仓库',
+      title: '适用仓库',
       dataIndex: 'warehouseName',
       key: 'warehouseName',
       width: 180,
+      render: () => '全部仓库',
     },
     {
       title: '当前库存',
@@ -345,12 +341,25 @@ export default function InventoryClient({
     productColumns.push({
       title: '操作',
       key: 'action',
-      width: 100,
+      width: 180,
       fixed: 'right',
       render: (_, row) => (
-        <Button size="small" onClick={() => openEditProductModal(row)}>
-          编辑
-        </Button>
+        <Space size={8}>
+          <Button size="small" onClick={() => openEditProductModal(row)}>
+            编辑
+          </Button>
+          <Popconfirm
+            title="确认删除该产品？"
+            description="若存在历史出入库记录，将自动停用。"
+            okText="删除"
+            cancelText="取消"
+            onConfirm={() => handleDeleteProduct(row)}
+          >
+            <Button size="small" danger>
+              删除
+            </Button>
+          </Popconfirm>
+        </Space>
       ),
     });
   }
@@ -367,7 +376,6 @@ export default function InventoryClient({
       category: PRODUCT_CATEGORY_OPTIONS[0],
       unit: PRODUCT_UNIT_OPTIONS[0],
       safeStock: 0,
-      warehouseId: defaultWarehouseId,
       status: true,
     });
     setIsProductModalOpen(true);
@@ -384,7 +392,6 @@ export default function InventoryClient({
       category: normalizeProductCategory(product.category),
       unit: normalizeProductUnit(product.unit),
       safeStock: product.safeStock,
-      warehouseId: product.warehouseId ?? undefined,
       status: product.status,
     });
     setIsProductModalOpen(true);
@@ -395,6 +402,31 @@ export default function InventoryClient({
     setEditingProduct(null);
     productForm.resetFields();
   }
+
+  const handleDeleteProduct = (row: ProductManageRow) => {
+    if (!access.isAdmin) {
+      messageApi.error('仅管理员可以删除产品。');
+      return;
+    }
+
+    startTransition(async () => {
+      try {
+        const formData = new FormData();
+        formData.set('productId', row.id);
+        const result = await deleteProduct(formData);
+        if (result.mode === 'disabled') {
+          messageApi.success('产品已有历史流水，已自动停用。');
+        } else {
+          messageApi.success('产品删除成功。');
+        }
+        router.refresh();
+      } catch (error) {
+        messageApi.error(
+          error instanceof Error ? error.message : '删除产品失败。'
+        );
+      }
+    });
+  };
 
   const handleSubmitProduct = async () => {
     if (!access.isAdmin) {
@@ -417,12 +449,6 @@ export default function InventoryClient({
           formData.set('unit', values.unit);
           formData.set('safeStock', String(values.safeStock ?? 0));
           formData.set('status', values.status ? 'true' : 'false');
-          formData.set(
-            'warehouseId',
-            access.isAdmin
-              ? values.warehouseId ?? ''
-              : access.warehouseId ?? ''
-          );
 
           if (editingProduct) {
             await updateProduct(formData);
@@ -542,7 +568,7 @@ export default function InventoryClient({
               allowClear
               value={productKeyword}
               onChange={(event) => setProductKeyword(event.target.value)}
-              placeholder="搜索产品：型号、名称、分类、仓库"
+              placeholder="搜索产品：型号、名称、分类"
               style={{ width: isMobile ? '100%' : 260 }}
             />
             <Button
@@ -580,7 +606,9 @@ export default function InventoryClient({
 
         {filteredProducts.length === 0 ? (
           <Typography.Text type="secondary">
-            暂无产品数据，可点击“新增产品”开始维护。
+            {access.isAdmin
+              ? '暂无产品数据，可点击“新增产品”开始维护。'
+              : '暂无可用产品，请联系管理员维护产品档案。'}
           </Typography.Text>
         ) : null}
 
@@ -616,7 +644,6 @@ export default function InventoryClient({
               category: PRODUCT_CATEGORY_OPTIONS[0],
               unit: PRODUCT_UNIT_OPTIONS[0],
               safeStock: 0,
-              warehouseId: defaultWarehouseId,
               status: true,
             }}
           >
@@ -668,23 +695,9 @@ export default function InventoryClient({
               <InputNumber min={0} step={1} style={{ width: '100%' }} />
             </Form.Item>
 
-            <Form.Item
-              label="所属仓库"
-              name="warehouseId"
-              rules={[{ required: true, message: '请选择所属仓库。' }]}
-              extra={
-                editingProduct
-                  ? '编辑产品时不允许调整所属仓库，避免历史库存错乱。'
-                  : undefined
-              }
-            >
-              <Select
-                options={productWarehouseOptions}
-                placeholder="请选择所属仓库"
-                disabled={!!editingProduct}
-                style={{ width: '100%' }}
-              />
-            </Form.Item>
+            <Typography.Text type="secondary">
+              适用仓库：全部仓库
+            </Typography.Text>
 
             <Form.Item label="状态" name="status" valuePropName="checked">
               <Switch checkedChildren="启用" unCheckedChildren="停用" />

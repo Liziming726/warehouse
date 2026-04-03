@@ -2,10 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/src/lib/supabase/server';
-import {
-  loadInventoryAccess,
-  resolveWriteWarehouseId,
-} from '@/src/lib/inventory/queries';
+import { loadInventoryAccess } from '@/src/lib/inventory/queries';
 import {
   PRODUCT_CATEGORY_OPTIONS,
   PRODUCT_UNIT_OPTIONS,
@@ -52,17 +49,6 @@ function parseUuidField(value: FormDataEntryValue | null, fieldLabel: string) {
   return text;
 }
 
-function parseOptionalUuidField(value: FormDataEntryValue | null, fieldLabel: string) {
-  const text = normalizeText(value);
-  if (!text) {
-    return null;
-  }
-  if (!UUID_RE.test(text)) {
-    throw new Error(`${fieldLabel}格式不正确。`);
-  }
-  return text;
-}
-
 function parseProductStatus(value: FormDataEntryValue | null) {
   const text = normalizeText(value).toLowerCase();
   if (!text) {
@@ -101,36 +87,7 @@ function mapProductWriteError(message: string, action: '新增' | '更新') {
     return `${action}产品失败：产品型号可能重复，请检查后重试。`;
   }
 
-  if (message.includes('violates foreign key constraint')) {
-    return `${action}产品失败：仓库信息无效。`;
-  }
-
   return `${action}产品失败：${message}`;
-}
-
-type ProductWarehouseRow = {
-  warehouse_id: string | null;
-};
-
-async function loadEditableProductWarehouse(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  productId: string
-) {
-  const result = await supabase
-    .from('products')
-    .select('warehouse_id')
-    .eq('id', productId)
-    .maybeSingle<ProductWarehouseRow>();
-
-  if (result.error) {
-    throw new Error(`加载产品信息失败：${result.error.message}`);
-  }
-
-  if (!result.data) {
-    throw new Error('产品不存在或已被删除。');
-  }
-
-  return normalizeText(result.data.warehouse_id);
 }
 
 export async function createProduct(formData: FormData) {
@@ -139,12 +96,6 @@ export async function createProduct(formData: FormData) {
   if (!access.isAdmin) {
     throw new Error('仅管理员可以新增产品。');
   }
-
-  const requestedWarehouseId = parseOptionalUuidField(
-    formData.get('warehouseId'),
-    '仓库'
-  );
-  const warehouseId = resolveWriteWarehouseId(access, requestedWarehouseId);
 
   const sku = parseRequiredText(formData.get('sku'), '产品型号', 100);
   const name = parseRequiredText(formData.get('name'), '产品名称', 200);
@@ -159,7 +110,7 @@ export async function createProduct(formData: FormData) {
     category,
     unit,
     safe_stock: safeStock,
-    warehouse_id: warehouseId,
+    warehouse_id: null,
     status,
   });
 
@@ -178,10 +129,6 @@ export async function updateProduct(formData: FormData) {
   }
 
   const productId = parseUuidField(formData.get('productId'), '产品');
-  const productWarehouseId = await loadEditableProductWarehouse(supabase, productId);
-  if (!productWarehouseId) {
-    throw new Error('产品仓库信息异常，无法编辑。');
-  }
 
   const sku = parseRequiredText(formData.get('sku'), '产品型号', 100);
   const name = parseRequiredText(formData.get('name'), '产品名称', 200);
@@ -198,6 +145,7 @@ export async function updateProduct(formData: FormData) {
       category,
       unit,
       safe_stock: safeStock,
+      warehouse_id: null,
       status,
     })
     .eq('id', productId)
@@ -213,4 +161,59 @@ export async function updateProduct(formData: FormData) {
   }
 
   revalidateInventoryPages();
+}
+
+function mapDeleteError(message: string) {
+  if (message.includes('foreign key')) {
+    return '该产品已有出入库记录，已改为停用处理。';
+  }
+  return `删除产品失败：${message}`;
+}
+
+export async function deleteProduct(formData: FormData) {
+  const supabase = await createClient();
+  const access = await loadInventoryAccess(supabase);
+  if (!access.isAdmin) {
+    throw new Error('仅管理员可以删除产品。');
+  }
+
+  const productId = parseUuidField(formData.get('productId'), '产品');
+
+  const deleteResult = await supabase
+    .from('products')
+    .delete()
+    .eq('id', productId)
+    .select('id')
+    .maybeSingle<{ id: string }>();
+
+  if (!deleteResult.error && deleteResult.data) {
+    revalidateInventoryPages();
+    return { mode: 'deleted' as const };
+  }
+
+  if (deleteResult.error && deleteResult.error.code === '23503') {
+    const disableResult = await supabase
+      .from('products')
+      .update({ status: false, warehouse_id: null })
+      .eq('id', productId)
+      .select('id')
+      .maybeSingle<{ id: string }>();
+
+    if (disableResult.error) {
+      throw new Error(mapDeleteError(disableResult.error.message));
+    }
+
+    if (!disableResult.data) {
+      throw new Error('产品不存在或已被删除。');
+    }
+
+    revalidateInventoryPages();
+    return { mode: 'disabled' as const };
+  }
+
+  if (deleteResult.error) {
+    throw new Error(mapDeleteError(deleteResult.error.message));
+  }
+
+  throw new Error('产品不存在或已被删除。');
 }
