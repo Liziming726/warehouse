@@ -38,6 +38,7 @@ type InboundClientProps = {
   products: ProductOption[];
   warehouses: WarehouseOption[];
   recentRows: MovementRow[];
+  preferredWarehouseId?: string | null;
   loadErrorMessage: string | null;
 };
 
@@ -64,6 +65,7 @@ export default function InboundClient({
   products,
   warehouses,
   recentRows,
+  preferredWarehouseId,
   loadErrorMessage,
 }: InboundClientProps) {
   const screens = useBreakpoint();
@@ -191,8 +193,9 @@ export default function InboundClient({
     },
   ];
 
-  const defaultWarehouseId =
-    access.warehouseId ?? warehouses[0]?.id ?? undefined;
+  const initialWarehouseId = access.isAdmin
+    ? preferredWarehouseId ?? warehouses[0]?.id ?? undefined
+    : access.warehouseId ?? undefined;
 
   const defaultBizDate = new Date().toISOString().slice(0, 10);
 
@@ -211,6 +214,7 @@ export default function InboundClient({
         ...values,
         warehouseId: access.isAdmin ? values.warehouseId : access.warehouseId ?? '',
       };
+      const nextWarehouseId = payload.warehouseId || initialWarehouseId;
 
       startTransition(async () => {
         try {
@@ -220,7 +224,7 @@ export default function InboundClient({
           form.setFieldsValue({
             bizDate: defaultBizDate,
             quantity: 1,
-            warehouseId: defaultWarehouseId,
+            warehouseId: nextWarehouseId,
           });
           router.refresh();
         } catch (error) {
@@ -288,7 +292,7 @@ export default function InboundClient({
           initialValues={{
             bizDate: defaultBizDate,
             quantity: 1,
-            warehouseId: defaultWarehouseId,
+            warehouseId: initialWarehouseId,
           }}
         >
           <Form.Item

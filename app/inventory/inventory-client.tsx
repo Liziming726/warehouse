@@ -178,6 +178,22 @@ export default function InventoryClient({
     (row) => row.stockStatus === 'OUT_OF_STOCK'
   ).length;
 
+  const shortcutWarehouseId = access.isAdmin
+    ? warehouseFilter === ALL_WAREHOUSES
+      ? null
+      : warehouseFilter
+    : access.warehouseId;
+
+  const canUseWarehouseShortcut = !!shortcutWarehouseId;
+
+  const inboundShortcutPath = shortcutWarehouseId
+    ? `/inbound?warehouseId=${encodeURIComponent(shortcutWarehouseId)}`
+    : '/inbound';
+
+  const outboundShortcutPath = shortcutWarehouseId
+    ? `/outbound?warehouseId=${encodeURIComponent(shortcutWarehouseId)}`
+    : '/outbound';
+
   const inventoryColumns: ColumnsType<InventoryRow> = [
     {
       title: '产品编码',
@@ -486,12 +502,31 @@ export default function InventoryClient({
               placeholder="搜索产品：编码、名称、分类、仓库"
               style={{ width: isMobile ? '100%' : 260 }}
             />
+            <Button
+              onClick={() => router.push(inboundShortcutPath)}
+              disabled={access.isAdmin && !canUseWarehouseShortcut}
+            >
+              去入库
+            </Button>
+            <Button
+              danger
+              onClick={() => router.push(outboundShortcutPath)}
+              disabled={access.isAdmin && !canUseWarehouseShortcut}
+            >
+              去出库
+            </Button>
             <Button type="primary" onClick={openCreateProductModal}>
               新增产品
             </Button>
           </Space>
         }
       >
+        {access.isAdmin && !canUseWarehouseShortcut ? (
+          <Typography.Text type="secondary">
+            请选择上方“仓库筛选”中的具体仓库后，即可快捷跳转并自动带入仓库。
+          </Typography.Text>
+        ) : null}
+
         {filteredProducts.length === 0 ? (
           <Typography.Text type="secondary">
             暂无产品数据，可点击“新增产品”开始维护。
@@ -516,7 +551,8 @@ export default function InventoryClient({
         okText={editingProduct ? '保存修改' : '创建产品'}
         cancelText="取消"
         confirmLoading={isPending}
-        destroyOnHidden
+        forceRender
+        destroyOnHidden={false}
         width={isMobile ? '100%' : 560}
         style={isMobile ? { top: 12 } : undefined}
       >
