@@ -43,7 +43,7 @@ export async function createOutbound(formData: FormData) {
     parseOptionalUuid(formData.get('warehouseId'), 'warehouseId')
   );
   const quantity = parsePositiveQuantity(formData.get('quantity'), 'quantity');
-  const bizDate = parseBizDate(formData.get('bizDate'));
+  const bizDate = access.isAdmin ? parseBizDate(formData.get('bizDate')) : null;
   const remark = parseRemark(formData.get('remark'));
   const operatorUserId = toOperatorUserId(access.userId);
 

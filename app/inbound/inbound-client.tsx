@@ -29,7 +29,7 @@ type InboundFormValues = {
   productId: string;
   warehouseId?: string;
   quantity: number;
-  bizDate: string;
+  bizDate?: string;
   remark?: string;
 };
 
@@ -55,7 +55,7 @@ function toFormData(values: InboundFormValues) {
   formData.set('productId', values.productId);
   formData.set('warehouseId', values.warehouseId ?? '');
   formData.set('quantity', String(values.quantity));
-  formData.set('bizDate', values.bizDate);
+  formData.set('bizDate', values.bizDate ?? '');
   formData.set('remark', values.remark ?? '');
   return formData;
 }
@@ -212,6 +212,7 @@ export default function InboundClient({
       const payload: InboundFormValues = {
         ...values,
         warehouseId: access.isAdmin ? values.warehouseId : access.warehouseId ?? '',
+        bizDate: access.isAdmin ? values.bizDate : undefined,
       };
       const nextWarehouseId = payload.warehouseId || initialWarehouseId;
 
@@ -343,9 +344,12 @@ export default function InboundClient({
           <Form.Item
             label="业务日期"
             name="bizDate"
+            extra={
+              access.isAdmin ? undefined : '员工账号自动使用当前操作日期，无法手动修改。'
+            }
             rules={[{ required: true, message: '请选择业务日期。' }]}
           >
-            <Input type="date" />
+            <Input type="date" disabled={!access.isAdmin} />
           </Form.Item>
 
           <Form.Item label="备注" name="remark">
