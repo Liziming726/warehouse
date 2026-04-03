@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useDeferredValue, useMemo, useState, useTransition } from 'react';
 import {
   Alert,
   Button,
@@ -30,6 +30,10 @@ import type {
   ProductManageRow,
   WarehouseOption,
 } from '@/src/lib/inventory/types';
+import {
+  PRODUCT_CATEGORY_OPTIONS,
+  PRODUCT_UNIT_OPTIONS,
+} from '@/src/lib/inventory/types';
 
 type InventoryClientProps = {
   access: InventoryAccess;
@@ -42,7 +46,7 @@ type InventoryClientProps = {
 type ProductFormValues = {
   sku: string;
   name: string;
-  category?: string;
+  category: string;
   unit: string;
   safeStock: number;
   warehouseId?: string;
@@ -50,6 +54,28 @@ type ProductFormValues = {
 };
 
 const ALL_WAREHOUSES = '__ALL__';
+
+const PRODUCT_CATEGORY_SELECT_OPTIONS = PRODUCT_CATEGORY_OPTIONS.map((value) => ({
+  label: value,
+  value,
+}));
+
+const PRODUCT_UNIT_SELECT_OPTIONS = PRODUCT_UNIT_OPTIONS.map((value) => ({
+  label: value,
+  value,
+}));
+
+function normalizeProductCategory(value: string) {
+  return PRODUCT_CATEGORY_OPTIONS.includes(value as (typeof PRODUCT_CATEGORY_OPTIONS)[number])
+    ? value
+    : PRODUCT_CATEGORY_OPTIONS[0];
+}
+
+function normalizeProductUnit(value: string) {
+  return PRODUCT_UNIT_OPTIONS.includes(value as (typeof PRODUCT_UNIT_OPTIONS)[number])
+    ? value
+    : PRODUCT_UNIT_OPTIONS[0];
+}
 
 function formatStockStatus(status: string) {
   if (status === 'OUT_OF_STOCK') {
@@ -82,7 +108,9 @@ export default function InventoryClient({
   const screens = useBreakpoint();
   const isMobile = !screens.md;
   const [keyword, setKeyword] = useState('');
+  const deferredKeyword = useDeferredValue(keyword);
   const [productKeyword, setProductKeyword] = useState('');
+  const deferredProductKeyword = useDeferredValue(productKeyword);
   const [warehouseFilter, setWarehouseFilter] = useState(ALL_WAREHOUSES);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<ProductManageRow | null>(null);
@@ -123,7 +151,7 @@ export default function InventoryClient({
   }, [access.isAdmin, rows, warehouseFilter]);
 
   const filteredRows = useMemo(() => {
-    const key = keyword.trim().toLowerCase();
+    const key = deferredKeyword.trim().toLowerCase();
     if (!key) {
       return warehouseScopedRows;
     }
@@ -140,7 +168,7 @@ export default function InventoryClient({
         .toLowerCase()
         .includes(key)
     );
-  }, [keyword, warehouseScopedRows]);
+  }, [deferredKeyword, warehouseScopedRows]);
 
   const warehouseScopedProducts = useMemo(() => {
     if (!access.isAdmin || warehouseFilter === ALL_WAREHOUSES) {
@@ -150,7 +178,7 @@ export default function InventoryClient({
   }, [access.isAdmin, products, warehouseFilter]);
 
   const filteredProducts = useMemo(() => {
-    const key = productKeyword.trim().toLowerCase();
+    const key = deferredProductKeyword.trim().toLowerCase();
     if (!key) {
       return warehouseScopedProducts;
     }
@@ -167,7 +195,7 @@ export default function InventoryClient({
         .toLowerCase()
         .includes(key)
     );
-  }, [productKeyword, warehouseScopedProducts]);
+  }, [deferredProductKeyword, warehouseScopedProducts]);
 
   const totalSku = filteredRows.length;
   const totalQty = filteredRows.reduce((sum, row) => sum + row.currentQty, 0);
@@ -196,7 +224,7 @@ export default function InventoryClient({
 
   const inventoryColumns: ColumnsType<InventoryRow> = [
     {
-      title: '产品编码',
+      title: '产品型号',
       dataIndex: 'sku',
       key: 'sku',
       width: 160,
@@ -259,7 +287,7 @@ export default function InventoryClient({
 
   const productColumns: ColumnsType<ProductManageRow> = [
     {
-      title: '产品编码',
+      title: '产品型号',
       dataIndex: 'sku',
       key: 'sku',
       width: 160,
@@ -311,7 +339,10 @@ export default function InventoryClient({
       width: 180,
       render: (value) => formatDateTime(String(value)),
     },
-    {
+  ];
+
+  if (access.isAdmin) {
+    productColumns.push({
       title: '操作',
       key: 'action',
       width: 100,
@@ -321,17 +352,20 @@ export default function InventoryClient({
           编辑
         </Button>
       ),
-    },
-  ];
+    });
+  }
 
   function openCreateProductModal() {
+    if (!access.isAdmin) {
+      return;
+    }
     setEditingProduct(null);
     productForm.resetFields();
     productForm.setFieldsValue({
       sku: '',
       name: '',
-      category: '',
-      unit: '台',
+      category: PRODUCT_CATEGORY_OPTIONS[0],
+      unit: PRODUCT_UNIT_OPTIONS[0],
       safeStock: 0,
       warehouseId: defaultWarehouseId,
       status: true,
@@ -340,12 +374,15 @@ export default function InventoryClient({
   }
 
   function openEditProductModal(product: ProductManageRow) {
+    if (!access.isAdmin) {
+      return;
+    }
     setEditingProduct(product);
     productForm.setFieldsValue({
       sku: product.sku,
       name: product.name,
-      category: product.category,
-      unit: product.unit,
+      category: normalizeProductCategory(product.category),
+      unit: normalizeProductUnit(product.unit),
       safeStock: product.safeStock,
       warehouseId: product.warehouseId ?? undefined,
       status: product.status,
@@ -360,6 +397,11 @@ export default function InventoryClient({
   }
 
   const handleSubmitProduct = async () => {
+    if (!access.isAdmin) {
+      messageApi.error('仅管理员可以新增或编辑产品。');
+      return;
+    }
+
     try {
       const values = await productForm.validateFields();
 
@@ -371,7 +413,7 @@ export default function InventoryClient({
           }
           formData.set('sku', values.sku);
           formData.set('name', values.name);
-          formData.set('category', values.category ?? '');
+          formData.set('category', values.category);
           formData.set('unit', values.unit);
           formData.set('safeStock', String(values.safeStock ?? 0));
           formData.set('status', values.status ? 'true' : 'false');
@@ -484,8 +526,9 @@ export default function InventoryClient({
             rowKey={(row) => `${row.warehouseId ?? '-'}-${row.productId}`}
             columns={inventoryColumns}
             dataSource={filteredRows}
+            virtual
             size={isMobile ? 'small' : 'middle'}
-            scroll={{ x: 1200 }}
+            scroll={{ x: 1200, y: isMobile ? 380 : 560 }}
             pagination={{ pageSize: isMobile ? 8 : 12 }}
           />
         </Space>
@@ -499,7 +542,7 @@ export default function InventoryClient({
               allowClear
               value={productKeyword}
               onChange={(event) => setProductKeyword(event.target.value)}
-              placeholder="搜索产品：编码、名称、分类、仓库"
+              placeholder="搜索产品：型号、名称、分类、仓库"
               style={{ width: isMobile ? '100%' : 260 }}
             />
             <Button
@@ -515,15 +558,23 @@ export default function InventoryClient({
             >
               去出库
             </Button>
-            <Button type="primary" onClick={openCreateProductModal}>
-              新增产品
-            </Button>
+            {access.isAdmin ? (
+              <Button type="primary" onClick={openCreateProductModal}>
+                新增产品
+              </Button>
+            ) : null}
           </Space>
         }
       >
         {access.isAdmin && !canUseWarehouseShortcut ? (
           <Typography.Text type="secondary">
             请选择上方“仓库筛选”中的具体仓库后，即可快捷跳转并自动带入仓库。
+          </Typography.Text>
+        ) : null}
+
+        {!access.isAdmin ? (
+          <Typography.Text type="secondary">
+            为保证名称口径统一，产品新增与编辑仅管理员可操作。
           </Typography.Text>
         ) : null}
 
@@ -537,72 +588,86 @@ export default function InventoryClient({
           rowKey="id"
           columns={productColumns}
           dataSource={filteredProducts}
+          virtual
           size={isMobile ? 'small' : 'middle'}
-          scroll={{ x: 1300 }}
+          scroll={{ x: 1300, y: isMobile ? 360 : 520 }}
           pagination={{ pageSize: isMobile ? 8 : 10 }}
         />
       </Card>
 
-      <Modal
-        title={editingProduct ? '编辑产品' : '新增产品'}
-        open={isProductModalOpen}
-        onCancel={closeProductModal}
-        onOk={handleSubmitProduct}
-        okText={editingProduct ? '保存修改' : '创建产品'}
-        cancelText="取消"
-        confirmLoading={isPending}
-        forceRender
-        destroyOnHidden={false}
-        width={isMobile ? '100%' : 560}
-        style={isMobile ? { top: 12 } : undefined}
-      >
-        <Form<ProductFormValues>
-          form={productForm}
-          layout="vertical"
-          initialValues={{
-            unit: '台',
-            safeStock: 0,
-            warehouseId: defaultWarehouseId,
-            status: true,
-          }}
+      {access.isAdmin ? (
+        <Modal
+          title={editingProduct ? '编辑产品' : '新增产品'}
+          open={isProductModalOpen}
+          onCancel={closeProductModal}
+          onOk={handleSubmitProduct}
+          okText={editingProduct ? '保存修改' : '创建产品'}
+          cancelText="取消"
+          confirmLoading={isPending}
+          forceRender
+          destroyOnHidden={false}
+          width={isMobile ? '100%' : 560}
+          style={isMobile ? { top: 12 } : undefined}
         >
-          <Form.Item
-            label="产品编码"
-            name="sku"
-            rules={[{ required: true, message: '请输入产品编码。' }]}
+          <Form<ProductFormValues>
+            form={productForm}
+            layout="vertical"
+            initialValues={{
+              category: PRODUCT_CATEGORY_OPTIONS[0],
+              unit: PRODUCT_UNIT_OPTIONS[0],
+              safeStock: 0,
+              warehouseId: defaultWarehouseId,
+              status: true,
+            }}
           >
-            <Input maxLength={100} placeholder="例如：WMS-001" />
-          </Form.Item>
+            <Form.Item
+              label="产品型号"
+              name="sku"
+              rules={[{ required: true, message: '请输入产品型号。' }]}
+            >
+              <Input maxLength={100} placeholder="例如：HM-1000" />
+            </Form.Item>
 
-          <Form.Item
-            label="产品名称"
-            name="name"
-            rules={[{ required: true, message: '请输入产品名称。' }]}
-          >
-            <Input maxLength={200} placeholder="例如：热熔划线机" />
-          </Form.Item>
+            <Form.Item
+              label="产品名称"
+              name="name"
+              rules={[{ required: true, message: '请输入产品名称。' }]}
+            >
+              <Input maxLength={200} placeholder="例如：热熔划线机" />
+            </Form.Item>
 
-          <Form.Item label="产品分类" name="category">
-            <Input maxLength={100} placeholder="例如：设备类" />
-          </Form.Item>
+            <Form.Item
+              label="产品分类"
+              name="category"
+              rules={[{ required: true, message: '请选择产品分类。' }]}
+            >
+              <Select
+                options={PRODUCT_CATEGORY_SELECT_OPTIONS}
+                placeholder="请选择产品分类"
+                style={{ width: '100%' }}
+              />
+            </Form.Item>
 
-          <Form.Item
-            label="单位"
-            name="unit"
-            rules={[{ required: true, message: '请输入单位。' }]}
-          >
-            <Input maxLength={50} placeholder="例如：台、件、副" />
-          </Form.Item>
+            <Form.Item
+              label="单位"
+              name="unit"
+              rules={[{ required: true, message: '请选择单位。' }]}
+            >
+              <Select
+                options={PRODUCT_UNIT_SELECT_OPTIONS}
+                placeholder="请选择单位"
+                style={{ width: '100%' }}
+              />
+            </Form.Item>
 
-          <Form.Item
-            label="安全库存"
-            name="safeStock"
-            rules={[{ required: true, message: '请输入安全库存。' }]}
-          >
-            <InputNumber min={0} step={1} style={{ width: '100%' }} />
-          </Form.Item>
+            <Form.Item
+              label="安全库存"
+              name="safeStock"
+              rules={[{ required: true, message: '请输入安全库存。' }]}
+            >
+              <InputNumber min={0} step={1} style={{ width: '100%' }} />
+            </Form.Item>
 
-          {access.isAdmin ? (
             <Form.Item
               label="所属仓库"
               name="warehouseId"
@@ -620,17 +685,13 @@ export default function InventoryClient({
                 style={{ width: '100%' }}
               />
             </Form.Item>
-          ) : (
-            <Typography.Text type="secondary">
-              所属仓库：{access.warehouseName ?? '未分配仓库'}
-            </Typography.Text>
-          )}
 
-          <Form.Item label="状态" name="status" valuePropName="checked">
-            <Switch checkedChildren="启用" unCheckedChildren="停用" />
-          </Form.Item>
-        </Form>
-      </Modal>
+            <Form.Item label="状态" name="status" valuePropName="checked">
+              <Switch checkedChildren="启用" unCheckedChildren="停用" />
+            </Form.Item>
+          </Form>
+        </Modal>
+      ) : null}
     </Space>
   );
 }

@@ -58,7 +58,7 @@ export default async function HomePage() {
 
   return (
     <WmsShell
-      title="仓库管理主面板"
+      title="远宏交通仓库管理主面板"
       subtitle="基于出入库流水自动汇总库存，支持多仓统一管理。"
       currentPath="/"
       access={access}

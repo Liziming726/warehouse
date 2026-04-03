@@ -1,29 +1,28 @@
 import Link from 'next/link';
-import { Button, Space } from 'antd';
 
 type WmsNavProps = {
   currentPath: '/' | '/inventory' | '/inbound' | '/outbound';
 };
 
-function navType(target: WmsNavProps['currentPath'], current: WmsNavProps['currentPath']) {
-  return target === current ? 'primary' : 'default';
-}
+const NAV_ITEMS: Array<{ path: WmsNavProps['currentPath']; label: string }> = [
+  { path: '/', label: '主面板' },
+  { path: '/inventory', label: '库存' },
+  { path: '/inbound', label: '入库' },
+  { path: '/outbound', label: '出库' },
+];
 
 export default function WmsNav({ currentPath }: WmsNavProps) {
   return (
-    <Space wrap size="small">
-      <Link href="/">
-        <Button type={navType(currentPath, '/')}>主面板</Button>
-      </Link>
-      <Link href="/inventory">
-        <Button type={navType(currentPath, '/inventory')}>库存</Button>
-      </Link>
-      <Link href="/inbound">
-        <Button type={navType(currentPath, '/inbound')}>入库</Button>
-      </Link>
-      <Link href="/outbound">
-        <Button type={navType(currentPath, '/outbound')}>出库</Button>
-      </Link>
-    </Space>
+    <nav className="wms-nav" aria-label="主导航">
+      {NAV_ITEMS.map((item) => (
+        <Link
+          key={item.path}
+          href={item.path}
+          className={`wms-nav-link ${currentPath === item.path ? 'is-active' : ''}`}
+        >
+          {item.label}
+        </Link>
+      ))}
+    </nav>
   );
 }

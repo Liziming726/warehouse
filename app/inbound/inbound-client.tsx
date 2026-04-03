@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, useTransition } from 'react';
+import { useDeferredValue, useEffect, useMemo, useState, useTransition } from 'react';
 import {
   Alert,
   Button,
@@ -74,6 +74,7 @@ export default function InboundClient({
   const [form] = Form.useForm<InboundFormValues>();
   const [isPending, startTransition] = useTransition();
   const [keyword, setKeyword] = useState('');
+  const deferredKeyword = useDeferredValue(keyword);
   const router = useRouter();
   const selectedWarehouseId = Form.useWatch('warehouseId', form);
 
@@ -121,7 +122,7 @@ export default function InboundClient({
   );
 
   const rows = useMemo(() => {
-    const key = keyword.trim().toLowerCase();
+    const key = deferredKeyword.trim().toLowerCase();
     if (!key) {
       return recentRows;
     }
@@ -138,7 +139,7 @@ export default function InboundClient({
         .toLowerCase()
         .includes(key)
     );
-  }, [keyword, recentRows]);
+  }, [deferredKeyword, recentRows]);
 
   const columns: ColumnsType<MovementRow> = [
     {
@@ -382,8 +383,9 @@ export default function InboundClient({
           columns={columns}
           dataSource={rows}
           loading={isPending}
+          virtual
           size={isMobile ? 'small' : 'middle'}
-          scroll={{ x: 1300 }}
+          scroll={{ x: 1300, y: isMobile ? 360 : 520 }}
           pagination={{ pageSize: isMobile ? 8 : 10 }}
         />
       </Card>

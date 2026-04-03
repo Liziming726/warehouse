@@ -90,7 +90,7 @@ export default async function InboundPage({ searchParams }: InboundPageProps) {
 
   return (
     <WmsShell
-      title="入库管理"
+      title="远宏交通入库管理"
       subtitle="按日期、产品和仓库登记入库记录。"
       currentPath="/inbound"
       access={access}

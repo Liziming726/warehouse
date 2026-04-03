@@ -90,7 +90,7 @@ export default async function OutboundPage({ searchParams }: OutboundPageProps) 
 
   return (
     <WmsShell
-      title="出库管理"
+      title="远宏交通出库管理"
       subtitle="登记出库记录，并在提交时自动校验库存。"
       currentPath="/outbound"
       access={access}

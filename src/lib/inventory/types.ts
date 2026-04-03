@@ -14,6 +14,14 @@ export type WarehouseOption = {
   name: string;
 };
 
+export const PRODUCT_CATEGORY_OPTIONS = ['设备', '配件', '划线斗'] as const;
+
+export type ProductCategory = (typeof PRODUCT_CATEGORY_OPTIONS)[number];
+
+export const PRODUCT_UNIT_OPTIONS = ['台', '件', '套'] as const;
+
+export type ProductUnit = (typeof PRODUCT_UNIT_OPTIONS)[number];
+
 export type ProductOption = {
   id: string;
   sku: string;

@@ -56,7 +56,7 @@ export default async function InventoryPage() {
 
   return (
     <WmsShell
-      title="库存总览"
+      title="远宏交通库存总览"
       subtitle="当前库存由入库与出库流水自动汇总生成。"
       currentPath="/inventory"
       access={access}

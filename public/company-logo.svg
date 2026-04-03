@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240" fill="none">
+  <rect width="240" height="240" rx="36" fill="#F2F6FF" />
+  <rect x="24" y="24" width="192" height="192" rx="24" fill="#FFFFFF" stroke="#D6E4FF" stroke-width="4" />
+  <path d="M70 86H170V112H70V86Z" fill="#1677FF" />
+  <path d="M70 126H170V152H70V126Z" fill="#69B1FF" />
+  <path d="M70 166H130V192H70V166Z" fill="#BAE0FF" />
+  <text x="120" y="56" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#1D39C4">LOGO</text>
+</svg>

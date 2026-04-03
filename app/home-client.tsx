@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useDeferredValue, useMemo, useState } from 'react';
 import {
   Alert,
   Card,
@@ -76,6 +76,7 @@ export default function HomeClient({
   const screens = useBreakpoint();
   const isMobile = !screens.md;
   const [keyword, setKeyword] = useState('');
+  const deferredKeyword = useDeferredValue(keyword);
   const [warehouseFilter, setWarehouseFilter] = useState(ALL_WAREHOUSES);
 
   const warehouseOptions = useMemo(() => {
@@ -99,7 +100,7 @@ export default function HomeClient({
   }, [access.isAdmin, inventoryRows, warehouseFilter]);
 
   const filteredInventoryRows = useMemo(() => {
-    const key = keyword.trim().toLowerCase();
+    const key = deferredKeyword.trim().toLowerCase();
     if (!key) {
       return warehouseScopedRows;
     }
@@ -115,7 +116,7 @@ export default function HomeClient({
         .toLowerCase()
         .includes(key)
     );
-  }, [keyword, warehouseScopedRows]);
+  }, [deferredKeyword, warehouseScopedRows]);
 
   const totalSku = filteredInventoryRows.length;
   const totalQty = filteredInventoryRows.reduce(
@@ -130,7 +131,7 @@ export default function HomeClient({
   );
 
   const inventoryColumns: ColumnsType<InventoryRow> = [
-    { title: '产品编码', dataIndex: 'sku', key: 'sku', width: 140 },
+    { title: '产品型号', dataIndex: 'sku', key: 'sku', width: 140 },
     {
       title: '产品名称',
       dataIndex: 'productName',
@@ -242,7 +243,7 @@ export default function HomeClient({
               allowClear
               value={keyword}
               onChange={(event) => setKeyword(event.target.value)}
-              placeholder="搜索产品编码、名称、分类、仓库"
+              placeholder="搜索产品型号、名称、分类、仓库"
               style={{ width: isMobile ? '100%' : 230 }}
             />
             {access.isAdmin ? (
@@ -260,8 +261,9 @@ export default function HomeClient({
           rowKey={(row) => `${row.warehouseId ?? '-'}-${row.productId}`}
           columns={inventoryColumns}
           dataSource={filteredInventoryRows}
+          virtual
           size={isMobile ? 'small' : 'middle'}
-          scroll={{ x: 980 }}
+          scroll={{ x: 980, y: isMobile ? 360 : 520 }}
           pagination={{ pageSize: isMobile ? 6 : 10 }}
         />
       </Card>
@@ -273,8 +275,9 @@ export default function HomeClient({
               rowKey="id"
               columns={movementColumns}
               dataSource={inboundRows}
+              virtual
               size={isMobile ? 'small' : 'middle'}
-              scroll={{ x: 860 }}
+              scroll={{ x: 860, y: isMobile ? 320 : 420 }}
               pagination={{ pageSize: 5 }}
             />
           </Card>
@@ -285,8 +288,9 @@ export default function HomeClient({
               rowKey="id"
               columns={movementColumns}
               dataSource={outboundRows}
+              virtual
               size={isMobile ? 'small' : 'middle'}
-              scroll={{ x: 860 }}
+              scroll={{ x: 860, y: isMobile ? 320 : 420 }}
               pagination={{ pageSize: 5 }}
             />
           </Card>

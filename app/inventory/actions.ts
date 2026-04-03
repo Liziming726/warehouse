@@ -6,6 +6,10 @@ import {
   loadInventoryAccess,
   resolveWriteWarehouseId,
 } from '@/src/lib/inventory/queries';
+import {
+  PRODUCT_CATEGORY_OPTIONS,
+  PRODUCT_UNIT_OPTIONS,
+} from '@/src/lib/inventory/types';
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -22,14 +26,6 @@ function parseRequiredText(
   const text = normalizeText(value);
   if (!text) {
     throw new Error(`${fieldLabel}不能为空。`);
-  }
-  return text.slice(0, maxLength);
-}
-
-function parseOptionalText(value: FormDataEntryValue | null, maxLength: number) {
-  const text = normalizeText(value);
-  if (!text) {
-    return null;
   }
   return text.slice(0, maxLength);
 }
@@ -75,6 +71,24 @@ function parseProductStatus(value: FormDataEntryValue | null) {
   return text === 'true' || text === '1' || text === 'on';
 }
 
+function parseProductCategory(value: FormDataEntryValue | null) {
+  const category = parseRequiredText(value, '产品分类', 20);
+  if (!PRODUCT_CATEGORY_OPTIONS.includes(category as (typeof PRODUCT_CATEGORY_OPTIONS)[number])) {
+    throw new Error(
+      `产品分类仅支持：${PRODUCT_CATEGORY_OPTIONS.join(' / ')}。`
+    );
+  }
+  return category;
+}
+
+function parseProductUnit(value: FormDataEntryValue | null) {
+  const unit = parseRequiredText(value, '单位', 10);
+  if (!PRODUCT_UNIT_OPTIONS.includes(unit as (typeof PRODUCT_UNIT_OPTIONS)[number])) {
+    throw new Error(`单位仅支持：${PRODUCT_UNIT_OPTIONS.join(' / ')}。`);
+  }
+  return unit;
+}
+
 function revalidateInventoryPages() {
   revalidatePath('/');
   revalidatePath('/inventory');
@@ -84,7 +98,7 @@ function revalidateInventoryPages() {
 
 function mapProductWriteError(message: string, action: '新增' | '更新') {
   if (message.includes('duplicate key')) {
-    return `${action}产品失败：产品编码可能重复，请检查后重试。`;
+    return `${action}产品失败：产品型号可能重复，请检查后重试。`;
   }
 
   if (message.includes('violates foreign key constraint')) {
@@ -122,6 +136,9 @@ async function loadEditableProductWarehouse(
 export async function createProduct(formData: FormData) {
   const supabase = await createClient();
   const access = await loadInventoryAccess(supabase);
+  if (!access.isAdmin) {
+    throw new Error('仅管理员可以新增产品。');
+  }
 
   const requestedWarehouseId = parseOptionalUuidField(
     formData.get('warehouseId'),
@@ -129,10 +146,10 @@ export async function createProduct(formData: FormData) {
   );
   const warehouseId = resolveWriteWarehouseId(access, requestedWarehouseId);
 
-  const sku = parseRequiredText(formData.get('sku'), '产品编码', 100);
+  const sku = parseRequiredText(formData.get('sku'), '产品型号', 100);
   const name = parseRequiredText(formData.get('name'), '产品名称', 200);
-  const category = parseOptionalText(formData.get('category'), 100);
-  const unit = parseRequiredText(formData.get('unit'), '单位', 50);
+  const category = parseProductCategory(formData.get('category'));
+  const unit = parseProductUnit(formData.get('unit'));
   const safeStock = parseNonNegativeNumber(formData.get('safeStock'), '安全库存');
   const status = parseProductStatus(formData.get('status'));
 
@@ -156,23 +173,20 @@ export async function createProduct(formData: FormData) {
 export async function updateProduct(formData: FormData) {
   const supabase = await createClient();
   const access = await loadInventoryAccess(supabase);
+  if (!access.isAdmin) {
+    throw new Error('仅管理员可以编辑产品。');
+  }
 
   const productId = parseUuidField(formData.get('productId'), '产品');
   const productWarehouseId = await loadEditableProductWarehouse(supabase, productId);
-
-  if (!access.isAdmin) {
-    if (!access.warehouseId) {
-      throw new Error('当前账号未分配仓库，请联系管理员。');
-    }
-    if (productWarehouseId !== access.warehouseId) {
-      throw new Error('你没有权限编辑该产品。');
-    }
+  if (!productWarehouseId) {
+    throw new Error('产品仓库信息异常，无法编辑。');
   }
 
-  const sku = parseRequiredText(formData.get('sku'), '产品编码', 100);
+  const sku = parseRequiredText(formData.get('sku'), '产品型号', 100);
   const name = parseRequiredText(formData.get('name'), '产品名称', 200);
-  const category = parseOptionalText(formData.get('category'), 100);
-  const unit = parseRequiredText(formData.get('unit'), '单位', 50);
+  const category = parseProductCategory(formData.get('category'));
+  const unit = parseProductUnit(formData.get('unit'));
   const safeStock = parseNonNegativeNumber(formData.get('safeStock'), '安全库存');
   const status = parseProductStatus(formData.get('status'));
 

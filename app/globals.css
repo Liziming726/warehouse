@@ -1,26 +1,268 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --wms-bg-0: #edf4ff;
+  --wms-bg-1: #dfeeff;
+  --wms-bg-2: #f6fbff;
+  --wms-surface: rgba(255, 255, 255, 0.88);
+  --wms-border: #d2def2;
+  --wms-text: #0f172a;
+  --wms-muted: #51607a;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--wms-bg-0);
+  --color-foreground: var(--wms-text);
+  --font-sans:
+    "SF Pro Display", "SF Pro Text", "PingFang SC", "Hiragino Sans GB",
+    "Microsoft YaHei", "Segoe UI", sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  min-height: 100vh;
+  color: var(--wms-text);
+  font-family:
+    "SF Pro Display", "SF Pro Text", "PingFang SC", "Hiragino Sans GB",
+    "Microsoft YaHei", "Segoe UI", sans-serif;
+  background:
+    radial-gradient(82rem 34rem at -10% -10%, rgba(22, 119, 255, 0.16), transparent 62%),
+    radial-gradient(56rem 26rem at 110% -20%, rgba(0, 201, 167, 0.12), transparent 60%),
+    linear-gradient(180deg, var(--wms-bg-0) 0%, var(--wms-bg-2) 58%, #fff 100%);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.ant-card {
+  border: 1px solid var(--wms-border);
+  background: var(--wms-surface);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 12px 34px rgba(16, 92, 205, 0.09);
+}
+
+.ant-card .ant-card-head {
+  min-height: 52px;
+  border-bottom: 1px solid #e8edf6;
+}
+
+.ant-card .ant-card-head-title {
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.ant-btn {
+  font-weight: 500;
+  letter-spacing: 0.2px;
+}
+
+.ant-btn-default {
+  border-color: #d5deea;
+  background: #fff;
+}
+
+.ant-btn-default:not(:disabled):hover {
+  border-color: #b8c4d6;
+  background: #f8fbff;
+}
+
+.ant-btn-primary {
+  box-shadow: 0 8px 18px rgba(22, 119, 255, 0.28);
+}
+
+.ant-input,
+.ant-input-affix-wrapper,
+.ant-input-number,
+.ant-select-selector {
+  border-color: #d7e0ec !important;
+  background: #fff !important;
+}
+
+.ant-input:focus,
+.ant-input-affix-wrapper:focus-within,
+.ant-input-number-focused,
+.ant-select-focused .ant-select-selector {
+  border-color: #1677ff !important;
+  box-shadow: 0 0 0 3px rgba(22, 119, 255, 0.18) !important;
+}
+
+.ant-table-wrapper .ant-table {
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.ant-table-wrapper .ant-table-thead > tr > th {
+  color: #334155;
+  font-weight: 600;
+}
+
+.wms-shell {
+  padding: 18px 16px 26px;
+  max-width: 1320px;
+  margin: 0 auto;
+}
+
+.wms-hero-card .ant-card-body {
+  padding: 0 !important;
+}
+
+.wms-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 22px 24px;
+  border-radius: 20px;
+  background:
+    linear-gradient(130deg, rgba(255, 255, 255, 0.96), rgba(233, 246, 255, 0.9));
+}
+
+.wms-hero::before {
+  content: "";
+  position: absolute;
+  right: -56px;
+  top: -72px;
+  width: 240px;
+  height: 240px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(22, 119, 255, 0.24), transparent 68%);
+}
+
+.wms-hero::after {
+  content: "";
+  position: absolute;
+  left: -90px;
+  bottom: -90px;
+  width: 240px;
+  height: 240px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(0, 201, 167, 0.2), transparent 68%);
+}
+
+.wms-hero-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.wms-hero-main {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+  min-width: 260px;
+}
+
+.wms-hero-title {
+  margin: 0;
+  font-size: clamp(1.28rem, 1.6vw, 1.62rem);
+  line-height: 1.25;
+  letter-spacing: 0.2px;
+}
+
+.wms-hero-subtitle {
+  margin: 0;
+  color: var(--wms-muted);
+  font-size: 0.96rem;
+}
+
+.wms-user-line {
+  margin: 0;
+  color: #354155;
+  font-size: 0.92rem;
+  font-weight: 500;
+}
+
+.wms-hero-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.wms-brand-panel {
+  border-radius: 15px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 10px 26px rgba(22, 119, 255, 0.2);
+  padding: 9px;
+}
+
+.wms-brand-logo {
+  width: clamp(82px, 9vw, 122px);
+  height: clamp(82px, 9vw, 122px);
+  object-fit: contain;
+  display: block;
+}
+
+.wms-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 16px;
+  border: 1px solid var(--wms-border);
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+}
+
+.wms-nav-link {
+  border-radius: 12px;
+  border: 1px solid transparent;
+  padding: 8px 15px;
+  font-size: 0.92rem;
+  color: #475569;
+  transition: all 0.2s ease;
+}
+
+.wms-nav-link:hover {
+  color: #0b4fcf;
+  background: #ecf4ff;
+  border-color: #bfd8ff;
+}
+
+.wms-nav-link.is-active {
+  color: #fff;
+  background: linear-gradient(135deg, #1677ff, #13a2ff);
+  border-color: #1677ff;
+  box-shadow: 0 8px 16px rgba(22, 119, 255, 0.3);
+}
+
+@media (max-width: 900px) {
+  .wms-shell {
+    padding: 14px 12px 20px;
+  }
+
+  .wms-hero {
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  .wms-hero-content {
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .wms-hero-right {
+    width: 100%;
+    justify-content: space-between;
+    margin-left: 0;
+  }
 }
