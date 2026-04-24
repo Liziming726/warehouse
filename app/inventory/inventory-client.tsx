@@ -15,7 +15,6 @@ import {
   Select,
   Space,
   Statistic,
-  Switch,
   Table,
   Tag,
   Typography,
@@ -54,7 +53,6 @@ type ProductFormValues = {
   category: string;
   unit: string;
   safeStock: number;
-  status: boolean;
 };
 
 const ALL_WAREHOUSES = '__ALL__';
@@ -184,7 +182,6 @@ export default function InventoryClient({
         row.category,
         row.unit,
         row.warehouseName,
-        row.status ? '启用' : '停用',
       ]
         .join(' ')
         .toLowerCase()
@@ -320,15 +317,6 @@ export default function InventoryClient({
       width: 180,
     },
     {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status',
-      width: 100,
-      render: (status) => (
-        <Tag color={status ? 'green' : 'red'}>{status ? '启用' : '停用'}</Tag>
-      ),
-    },
-    {
       title: '更新时间',
       dataIndex: 'updatedAt',
       key: 'updatedAt',
@@ -350,7 +338,7 @@ export default function InventoryClient({
           </Button>
           <Popconfirm
             title="确认删除该产品？"
-            description="若存在历史出入库记录，将自动停用。"
+            description="删除后会同步清理该产品的出入库流水，且无法恢复。"
             okText="删除"
             cancelText="取消"
             onConfirm={() => handleDeleteProduct(row)}
@@ -376,7 +364,6 @@ export default function InventoryClient({
       category: PRODUCT_CATEGORY_OPTIONS[0],
       unit: PRODUCT_UNIT_OPTIONS[0],
       safeStock: 0,
-      status: true,
     });
     setIsProductModalOpen(true);
   }
@@ -392,7 +379,6 @@ export default function InventoryClient({
       category: normalizeProductCategory(product.category),
       unit: normalizeProductUnit(product.unit),
       safeStock: product.safeStock,
-      status: product.status,
     });
     setIsProductModalOpen(true);
   }
@@ -413,12 +399,8 @@ export default function InventoryClient({
       try {
         const formData = new FormData();
         formData.set('productId', row.id);
-        const result = await deleteProduct(formData);
-        if (result.mode === 'disabled') {
-          messageApi.success('产品已有历史流水，已自动停用。');
-        } else {
-          messageApi.success('产品删除成功。');
-        }
+        await deleteProduct(formData);
+        messageApi.success('产品删除成功。');
         router.refresh();
       } catch (error) {
         messageApi.error(
@@ -448,7 +430,6 @@ export default function InventoryClient({
           formData.set('category', values.category);
           formData.set('unit', values.unit);
           formData.set('safeStock', String(values.safeStock ?? 0));
-          formData.set('status', values.status ? 'true' : 'false');
 
           if (editingProduct) {
             await updateProduct(formData);
@@ -644,7 +625,6 @@ export default function InventoryClient({
               category: PRODUCT_CATEGORY_OPTIONS[0],
               unit: PRODUCT_UNIT_OPTIONS[0],
               safeStock: 0,
-              status: true,
             }}
           >
             <Form.Item
@@ -698,10 +678,6 @@ export default function InventoryClient({
             <Typography.Text type="secondary">
               适用仓库：全部仓库
             </Typography.Text>
-
-            <Form.Item label="状态" name="status" valuePropName="checked">
-              <Switch checkedChildren="启用" unCheckedChildren="停用" />
-            </Form.Item>
           </Form>
         </Modal>
       ) : null}

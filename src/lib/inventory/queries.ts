@@ -333,7 +333,9 @@ export async function loadProductManageRows(
     throw new Error(`加载产品列表失败：${error.message}`);
   }
 
-  const rows = (data ?? []) as ProductManageDbRow[];
+  const rows = ((data ?? []) as ProductManageDbRow[]).filter(
+    (row) => row.status !== false
+  );
   return rows.map((row) => ({
     id: row.id,
     sku: normalizeText(row.sku) ?? '-',

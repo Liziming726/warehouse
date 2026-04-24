@@ -27,7 +27,10 @@ function parseRequiredText(
   return text.slice(0, maxLength);
 }
 
-function parseNonNegativeNumber(value: FormDataEntryValue | null, fieldLabel: string) {
+function parseNonNegativeNumber(
+  value: FormDataEntryValue | null,
+  fieldLabel: string
+) {
   const text = normalizeText(value);
   if (!text) {
     return 0;
@@ -49,17 +52,13 @@ function parseUuidField(value: FormDataEntryValue | null, fieldLabel: string) {
   return text;
 }
 
-function parseProductStatus(value: FormDataEntryValue | null) {
-  const text = normalizeText(value).toLowerCase();
-  if (!text) {
-    return true;
-  }
-  return text === 'true' || text === '1' || text === 'on';
-}
-
 function parseProductCategory(value: FormDataEntryValue | null) {
   const category = parseRequiredText(value, '产品分类', 20);
-  if (!PRODUCT_CATEGORY_OPTIONS.includes(category as (typeof PRODUCT_CATEGORY_OPTIONS)[number])) {
+  if (
+    !PRODUCT_CATEGORY_OPTIONS.includes(
+      category as (typeof PRODUCT_CATEGORY_OPTIONS)[number]
+    )
+  ) {
     throw new Error(
       `产品分类仅支持：${PRODUCT_CATEGORY_OPTIONS.join(' / ')}。`
     );
@@ -102,7 +101,6 @@ export async function createProduct(formData: FormData) {
   const category = parseProductCategory(formData.get('category'));
   const unit = parseProductUnit(formData.get('unit'));
   const safeStock = parseNonNegativeNumber(formData.get('safeStock'), '安全库存');
-  const status = parseProductStatus(formData.get('status'));
 
   const { error } = await supabase.from('products').insert({
     sku,
@@ -111,7 +109,7 @@ export async function createProduct(formData: FormData) {
     unit,
     safe_stock: safeStock,
     warehouse_id: null,
-    status,
+    status: true,
   });
 
   if (error) {
@@ -129,13 +127,11 @@ export async function updateProduct(formData: FormData) {
   }
 
   const productId = parseUuidField(formData.get('productId'), '产品');
-
   const sku = parseRequiredText(formData.get('sku'), '产品型号', 100);
   const name = parseRequiredText(formData.get('name'), '产品名称', 200);
   const category = parseProductCategory(formData.get('category'));
   const unit = parseProductUnit(formData.get('unit'));
   const safeStock = parseNonNegativeNumber(formData.get('safeStock'), '安全库存');
-  const status = parseProductStatus(formData.get('status'));
 
   const { data, error } = await supabase
     .from('products')
@@ -146,7 +142,6 @@ export async function updateProduct(formData: FormData) {
       unit,
       safe_stock: safeStock,
       warehouse_id: null,
-      status,
     })
     .eq('id', productId)
     .select('id')
@@ -165,7 +160,7 @@ export async function updateProduct(formData: FormData) {
 
 function mapDeleteError(message: string) {
   if (message.includes('foreign key')) {
-    return '该产品已有出入库记录，已改为停用处理。';
+    return '删除产品失败：存在关联数据，请稍后重试。';
   }
   return `删除产品失败：${message}`;
 }
@@ -179,6 +174,16 @@ export async function deleteProduct(formData: FormData) {
 
   const productId = parseUuidField(formData.get('productId'), '产品');
 
+  // Hard delete: remove stock movements first, then remove product master.
+  const movementDeleteResult = await supabase
+    .from('stock_movements')
+    .delete()
+    .eq('product_id', productId);
+
+  if (movementDeleteResult.error) {
+    throw new Error(mapDeleteError(movementDeleteResult.error.message));
+  }
+
   const deleteResult = await supabase
     .from('products')
     .delete()
@@ -186,34 +191,13 @@ export async function deleteProduct(formData: FormData) {
     .select('id')
     .maybeSingle<{ id: string }>();
 
-  if (!deleteResult.error && deleteResult.data) {
-    revalidateInventoryPages();
-    return { mode: 'deleted' as const };
-  }
-
-  if (deleteResult.error && deleteResult.error.code === '23503') {
-    const disableResult = await supabase
-      .from('products')
-      .update({ status: false, warehouse_id: null })
-      .eq('id', productId)
-      .select('id')
-      .maybeSingle<{ id: string }>();
-
-    if (disableResult.error) {
-      throw new Error(mapDeleteError(disableResult.error.message));
-    }
-
-    if (!disableResult.data) {
-      throw new Error('产品不存在或已被删除。');
-    }
-
-    revalidateInventoryPages();
-    return { mode: 'disabled' as const };
-  }
-
   if (deleteResult.error) {
     throw new Error(mapDeleteError(deleteResult.error.message));
   }
 
-  throw new Error('产品不存在或已被删除。');
+  if (!deleteResult.data) {
+    throw new Error('产品不存在或已被删除。');
+  }
+
+  revalidateInventoryPages();
 }
