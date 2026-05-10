@@ -142,6 +142,13 @@ export default function HomeClient({
     { title: '当前库存', dataIndex: 'currentQty', key: 'currentQty', width: 100 },
     { title: '安全库存', dataIndex: 'safeStock', key: 'safeStock', width: 100 },
     {
+      title: '备注',
+      dataIndex: 'remark',
+      key: 'remark',
+      width: 160,
+      render: (text) => text || '-',
+    },
+    {
       title: '状态',
       key: 'stockStatus',
       width: 130,
@@ -174,6 +181,13 @@ export default function HomeClient({
       key: 'createdAt',
       width: 170,
       render: (value) => formatDateTime(String(value)),
+    },
+    {
+      title: '备注',
+      dataIndex: 'remark',
+      key: 'remark',
+      width: 160,
+      render: (text) => text || '-',
     },
   ];
 
@@ -263,7 +277,7 @@ export default function HomeClient({
           dataSource={filteredInventoryRows}
           virtual
           size={isMobile ? 'small' : 'middle'}
-          scroll={{ x: 980, y: isMobile ? 360 : 520 }}
+          scroll={{ x: 1180, y: isMobile ? 360 : 520 }}
           pagination={{ pageSize: isMobile ? 6 : 10 }}
         />
       </Card>
@@ -277,7 +291,7 @@ export default function HomeClient({
               dataSource={inboundRows}
               virtual
               size={isMobile ? 'small' : 'middle'}
-              scroll={{ x: 860, y: isMobile ? 320 : 420 }}
+              scroll={{ x: 1020, y: isMobile ? 320 : 420 }}
               pagination={{ pageSize: 5 }}
             />
           </Card>
@@ -290,7 +304,7 @@ export default function HomeClient({
               dataSource={outboundRows}
               virtual
               size={isMobile ? 'small' : 'middle'}
-              scroll={{ x: 860, y: isMobile ? 320 : 420 }}
+              scroll={{ x: 1020, y: isMobile ? 320 : 420 }}
               pagination={{ pageSize: 5 }}
             />
           </Card>

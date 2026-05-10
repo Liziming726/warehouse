@@ -51,6 +51,7 @@ type ProductManageDbRow = {
   safe_stock: number | string | null;
   warehouse_id: string | null;
   status: boolean | null;
+  remark: string | null;
   created_at: string | null;
   updated_at: string | null;
 };
@@ -87,6 +88,7 @@ type InventoryViewRow = {
   safe_stock: number | string | null;
   current_qty: number | string | null;
   stock_status: string | null;
+  remark: string | null;
 };
 
 export class InventorySchemaError extends Error {
@@ -320,7 +322,7 @@ export async function loadProductManageRows(
   const query = supabase
     .from('products')
     .select(
-      'id,sku,name,category,unit,safe_stock,warehouse_id,status,created_at,updated_at'
+      'id,sku,name,category,unit,safe_stock,warehouse_id,status,remark,created_at,updated_at'
     )
     .order('created_at', { ascending: false });
 
@@ -346,6 +348,7 @@ export async function loadProductManageRows(
     warehouseId: null,
     warehouseName: '全部仓库',
     status: row.status !== false,
+    remark: normalizeText(row.remark),
     createdAt: normalizeText(row.created_at) ?? '',
     updatedAt: normalizeText(row.updated_at) ?? '',
   }));
@@ -415,7 +418,7 @@ export async function loadInventoryRows(
   let query = supabase
     .from('v_current_inventory')
     .select(
-      'warehouse_id,warehouse_code,warehouse_name,product_id,sku,product_name,category,unit,safe_stock,current_qty,stock_status'
+      'warehouse_id,warehouse_code,warehouse_name,product_id,sku,product_name,category,unit,safe_stock,current_qty,stock_status,remark'
     )
     .order('sku', { ascending: true });
 
@@ -448,6 +451,7 @@ export async function loadInventoryRows(
     safeStock: toNumber(row.safe_stock),
     currentQty: toNumber(row.current_qty),
     stockStatus: normalizeText(row.stock_status) ?? 'NORMAL',
+    remark: normalizeText(row.remark),
   }));
 }
 

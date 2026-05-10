@@ -53,6 +53,7 @@ type ProductFormValues = {
   category: string;
   unit: string;
   safeStock: number;
+  remark: string;
 };
 
 const ALL_WAREHOUSES = '__ALL__';
@@ -259,6 +260,13 @@ export default function InventoryClient({
       width: 120,
     },
     {
+      title: '备注',
+      dataIndex: 'remark',
+      key: 'remark',
+      width: 160,
+      render: (text) => text || '-',
+    },
+    {
       title: '状态',
       key: 'stockStatus',
       width: 120,
@@ -309,6 +317,13 @@ export default function InventoryClient({
       dataIndex: 'safeStock',
       key: 'safeStock',
       width: 120,
+    },
+    {
+      title: '备注',
+      dataIndex: 'remark',
+      key: 'remark',
+      width: 160,
+      render: (text) => text || '-',
     },
     {
       title: '所属仓库',
@@ -364,6 +379,7 @@ export default function InventoryClient({
       category: PRODUCT_CATEGORY_OPTIONS[0],
       unit: PRODUCT_UNIT_OPTIONS[0],
       safeStock: 0,
+      remark: '',
     });
     setIsProductModalOpen(true);
   }
@@ -379,6 +395,7 @@ export default function InventoryClient({
       category: normalizeProductCategory(product.category),
       unit: normalizeProductUnit(product.unit),
       safeStock: product.safeStock,
+      remark: product.remark ?? '',
     });
     setIsProductModalOpen(true);
   }
@@ -430,6 +447,7 @@ export default function InventoryClient({
           formData.set('category', values.category);
           formData.set('unit', values.unit);
           formData.set('safeStock', String(values.safeStock ?? 0));
+          formData.set('remark', values.remark ?? '');
 
           if (editingProduct) {
             await updateProduct(formData);
@@ -535,7 +553,7 @@ export default function InventoryClient({
             dataSource={filteredRows}
             virtual
             size={isMobile ? 'small' : 'middle'}
-            scroll={{ x: 1200, y: isMobile ? 380 : 560 }}
+            scroll={{ x: 1360, y: isMobile ? 380 : 560 }}
             pagination={{ pageSize: isMobile ? 8 : 12 }}
           />
         </Space>
@@ -599,7 +617,7 @@ export default function InventoryClient({
           dataSource={filteredProducts}
           virtual
           size={isMobile ? 'small' : 'middle'}
-          scroll={{ x: 1300, y: isMobile ? 360 : 520 }}
+          scroll={{ x: 1460, y: isMobile ? 360 : 520 }}
           pagination={{ pageSize: isMobile ? 8 : 10 }}
         />
       </Card>
@@ -625,6 +643,7 @@ export default function InventoryClient({
               category: PRODUCT_CATEGORY_OPTIONS[0],
               unit: PRODUCT_UNIT_OPTIONS[0],
               safeStock: 0,
+              remark: '',
             }}
           >
             <Form.Item
@@ -673,6 +692,10 @@ export default function InventoryClient({
               rules={[{ required: true, message: '请输入安全库存。' }]}
             >
               <InputNumber min={0} step={1} style={{ width: '100%' }} />
+            </Form.Item>
+
+            <Form.Item label="备注" name="remark">
+              <Input.TextArea rows={3} maxLength={500} />
             </Form.Item>
 
             <Typography.Text type="secondary">

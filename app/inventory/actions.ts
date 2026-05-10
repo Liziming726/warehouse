@@ -74,6 +74,11 @@ function parseProductUnit(value: FormDataEntryValue | null) {
   return unit;
 }
 
+function parseOptionalRemark(value: FormDataEntryValue | null) {
+  const text = normalizeText(value);
+  return text.slice(0, 500) || null;
+}
+
 function revalidateInventoryPages() {
   revalidatePath('/');
   revalidatePath('/inventory');
@@ -101,6 +106,7 @@ export async function createProduct(formData: FormData) {
   const category = parseProductCategory(formData.get('category'));
   const unit = parseProductUnit(formData.get('unit'));
   const safeStock = parseNonNegativeNumber(formData.get('safeStock'), '安全库存');
+  const remark = parseOptionalRemark(formData.get('remark'));
 
   const { error } = await supabase.from('products').insert({
     sku,
@@ -110,6 +116,7 @@ export async function createProduct(formData: FormData) {
     safe_stock: safeStock,
     warehouse_id: null,
     status: true,
+    remark,
   });
 
   if (error) {
@@ -132,6 +139,7 @@ export async function updateProduct(formData: FormData) {
   const category = parseProductCategory(formData.get('category'));
   const unit = parseProductUnit(formData.get('unit'));
   const safeStock = parseNonNegativeNumber(formData.get('safeStock'), '安全库存');
+  const remark = parseOptionalRemark(formData.get('remark'));
 
   const { data, error } = await supabase
     .from('products')
@@ -142,6 +150,7 @@ export async function updateProduct(formData: FormData) {
       unit,
       safe_stock: safeStock,
       warehouse_id: null,
+      remark,
     })
     .eq('id', productId)
     .select('id')

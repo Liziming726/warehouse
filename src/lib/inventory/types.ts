@@ -42,6 +42,7 @@ export type ProductManageRow = {
   warehouseId: string | null;
   warehouseName: string;
   status: boolean;
+  remark: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -79,4 +80,5 @@ export type InventoryRow = {
   safeStock: number;
   currentQty: number;
   stockStatus: 'NORMAL' | 'LOW_STOCK' | 'OUT_OF_STOCK' | string;
+  remark: string | null;
 };
