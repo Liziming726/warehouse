@@ -18,6 +18,7 @@ import type { ColumnsType } from 'antd/es/table';
 import useBreakpoint from 'antd/es/grid/hooks/useBreakpoint';
 import { useRouter } from 'next/navigation';
 import { createOutbound } from '@/app/outbound/actions';
+import { updateMovementRemark } from '@/app/inventory/actions';
 import type {
   InventoryAccess,
   MovementRow,
@@ -139,6 +140,53 @@ export default function OutboundClient({
     );
   }, [deferredKeyword, recentRows]);
 
+  function RemarkCell({ value, onSave }: { value: string | null; onSave: (newValue: string) => void }) {
+    const [editing, setEditing] = useState(false);
+    const [text, setText] = useState(value ?? '');
+
+    if (!editing) {
+      return (
+        <div
+          onClick={() => { setText(value ?? ''); setEditing(true); }}
+          style={{ cursor: 'pointer', minHeight: 24, padding: '4px 0' }}
+        >
+          {value || <Typography.Text type="secondary">-</Typography.Text>}
+        </div>
+      );
+    }
+
+    return (
+      <Input
+        size="small"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onBlur={() => { onSave(text); setEditing(false); }}
+        onPressEnter={() => { onSave(text); setEditing(false); }}
+        onKeyDown={(e) => { if (e.key === 'Escape') { setText(value ?? ''); setEditing(false); } }}
+        onClick={(e) => e.stopPropagation()}
+        maxLength={500}
+        placeholder="输入备注"
+        style={{ width: '100%' }}
+      />
+    );
+  }
+
+  function saveMovementRemark(movementId: string, oldValue: string | null, newValue: string) {
+    const trimmed = newValue.trim();
+    if (trimmed === (oldValue ?? '').trim()) return;
+    startTransition(async () => {
+      try {
+        const formData = new FormData();
+        formData.set('movementId', movementId);
+        formData.set('remark', trimmed);
+        await updateMovementRemark(formData);
+        router.refresh();
+      } catch (error) {
+        messageApi.error(error instanceof Error ? error.message : '更新备注失败。');
+      }
+    });
+  }
+
   const columns: ColumnsType<MovementRow> = [
     {
       title: '业务日期',
@@ -187,8 +235,13 @@ export default function OutboundClient({
       title: '备注',
       dataIndex: 'remark',
       key: 'remark',
-      width: 260,
-      render: (text) => text || '-',
+      width: 240,
+      render: (text, row) => (
+        <RemarkCell
+          value={text}
+          onSave={(newValue) => saveMovementRemark(row.id, text, newValue)}
+        />
+      ),
     },
   ];
 

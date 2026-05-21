@@ -229,3 +229,22 @@ export async function updateProductRemark(formData: FormData) {
 
   revalidateInventoryPages();
 }
+
+export async function updateMovementRemark(formData: FormData) {
+  const supabase = await createClient();
+  await loadInventoryAccess(supabase);
+
+  const movementId = parseUuidField(formData.get('movementId'), '流水');
+  const remark = parseOptionalRemark(formData.get('remark'));
+
+  const { error } = await supabase
+    .from('stock_movements')
+    .update({ remark })
+    .eq('id', movementId);
+
+  if (error) {
+    throw new Error(`更新备注失败：${error.message}`);
+  }
+
+  revalidateInventoryPages();
+}

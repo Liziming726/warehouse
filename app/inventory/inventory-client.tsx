@@ -59,6 +59,14 @@ type ProductFormValues = {
 
 const ALL_WAREHOUSES = '__ALL__';
 const ALL_CATEGORIES = '__ALL__';
+const ALL_STATUSES = '__ALL__';
+
+const STATUS_OPTIONS = [
+  { label: '全部状态', value: ALL_STATUSES },
+  { label: '正常', value: 'NORMAL' },
+  { label: '低库存', value: 'LOW_STOCK' },
+  { label: '缺货', value: 'OUT_OF_STOCK' },
+];
 
 const PRODUCT_CATEGORY_SELECT_OPTIONS = PRODUCT_CATEGORY_OPTIONS.map((value) => ({
   label: value,
@@ -118,6 +126,7 @@ export default function InventoryClient({
   const deferredProductKeyword = useDeferredValue(productKeyword);
   const [warehouseFilter, setWarehouseFilter] = useState(ALL_WAREHOUSES);
   const [categoryFilter, setCategoryFilter] = useState(ALL_CATEGORIES);
+  const [statusFilter, setStatusFilter] = useState(ALL_STATUSES);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<ProductManageRow | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -155,6 +164,9 @@ export default function InventoryClient({
     if (categoryFilter !== ALL_CATEGORIES) {
       result = result.filter((row) => row.category === categoryFilter);
     }
+    if (statusFilter !== ALL_STATUSES) {
+      result = result.filter((row) => row.stockStatus === statusFilter);
+    }
     const key = deferredKeyword.trim().toLowerCase();
     if (key) {
       result = result.filter((row) =>
@@ -165,7 +177,7 @@ export default function InventoryClient({
       );
     }
     return result;
-  }, [deferredKeyword, warehouseScopedRows, categoryFilter]);
+  }, [deferredKeyword, warehouseScopedRows, categoryFilter, statusFilter]);
 
   const warehouseScopedProducts = useMemo(() => {
     if (!access.isAdmin || warehouseFilter === ALL_WAREHOUSES) {
@@ -610,6 +622,12 @@ export default function InventoryClient({
               options={categoryOptions}
               onChange={setCategoryFilter}
               style={{ width: isMobile ? '100%' : 160 }}
+            />
+            <Select
+              value={statusFilter}
+              options={STATUS_OPTIONS}
+              onChange={setStatusFilter}
+              style={{ width: isMobile ? '100%' : 150 }}
             />
           </Space>
 

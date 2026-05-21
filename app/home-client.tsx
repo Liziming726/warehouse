@@ -18,7 +18,7 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import useBreakpoint from 'antd/es/grid/hooks/useBreakpoint';
 import { useRouter } from 'next/navigation';
-import { updateProductRemark } from '@/app/inventory/actions';
+import { updateMovementRemark, updateProductRemark } from '@/app/inventory/actions';
 import type {
   InventoryAccess,
   InventoryRow,
@@ -36,6 +36,14 @@ type HomeClientProps = {
 };
 
 const ALL_WAREHOUSES = '__ALL__';
+const ALL_STATUSES = '__ALL__';
+
+const STATUS_OPTIONS = [
+  { label: '全部状态', value: ALL_STATUSES },
+  { label: '正常', value: 'NORMAL' },
+  { label: '低库存', value: 'LOW_STOCK' },
+  { label: '缺货', value: 'OUT_OF_STOCK' },
+];
 
 function statusColor(status: string) {
   if (status === 'OUT_OF_STOCK') {
@@ -81,6 +89,7 @@ export default function HomeClient({
   const [keyword, setKeyword] = useState('');
   const deferredKeyword = useDeferredValue(keyword);
   const [warehouseFilter, setWarehouseFilter] = useState(ALL_WAREHOUSES);
+  const [statusFilter, setStatusFilter] = useState(ALL_STATUSES);
   const [isPending, startTransition] = useTransition();
   const [messageApi, contextHolder] = message.useMessage();
   const router = useRouter();
@@ -106,23 +115,21 @@ export default function HomeClient({
   }, [access.isAdmin, inventoryRows, warehouseFilter]);
 
   const filteredInventoryRows = useMemo(() => {
-    const key = deferredKeyword.trim().toLowerCase();
-    if (!key) {
-      return warehouseScopedRows;
+    let result = warehouseScopedRows;
+    if (statusFilter !== ALL_STATUSES) {
+      result = result.filter((row) => row.stockStatus === statusFilter);
     }
-    return warehouseScopedRows.filter((row) =>
-      [
-        row.sku,
-        row.productName,
-        row.category,
-        row.warehouseName,
-        row.stockStatus,
-      ]
-        .join(' ')
-        .toLowerCase()
-        .includes(key)
-    );
-  }, [deferredKeyword, warehouseScopedRows]);
+    const key = deferredKeyword.trim().toLowerCase();
+    if (key) {
+      result = result.filter((row) =>
+        [row.sku, row.productName, row.category, row.warehouseName, row.stockStatus]
+          .join(' ')
+          .toLowerCase()
+          .includes(key)
+      );
+    }
+    return result;
+  }, [deferredKeyword, warehouseScopedRows, statusFilter]);
 
   const totalSku = filteredInventoryRows.length;
   const totalQty = filteredInventoryRows.reduce(
@@ -176,6 +183,22 @@ export default function HomeClient({
         formData.set('productId', productId);
         formData.set('remark', trimmed);
         await updateProductRemark(formData);
+        router.refresh();
+      } catch (error) {
+        messageApi.error(error instanceof Error ? error.message : '更新备注失败。');
+      }
+    });
+  }
+
+  function saveMovementRemark(movementId: string, oldValue: string | null, newValue: string) {
+    const trimmed = newValue.trim();
+    if (trimmed === (oldValue ?? '').trim()) return;
+    startTransition(async () => {
+      try {
+        const formData = new FormData();
+        formData.set('movementId', movementId);
+        formData.set('remark', trimmed);
+        await updateMovementRemark(formData);
         router.refresh();
       } catch (error) {
         messageApi.error(error instanceof Error ? error.message : '更新备注失败。');
@@ -244,8 +267,13 @@ export default function HomeClient({
       title: '备注',
       dataIndex: 'remark',
       key: 'remark',
-      width: 160,
-      render: (text) => text || '-',
+      width: 180,
+      render: (text, row) => (
+        <RemarkCell
+          value={text}
+          onSave={(newValue) => saveMovementRemark(row.id, text, newValue)}
+        />
+      ),
     },
   ];
 
@@ -328,6 +356,12 @@ export default function HomeClient({
                 style={{ width: isMobile ? '100%' : 220 }}
               />
             ) : null}
+            <Select
+              value={statusFilter}
+              options={STATUS_OPTIONS}
+              onChange={setStatusFilter}
+              style={{ width: isMobile ? '100%' : 150 }}
+            />
           </Space>
         }
       >
