@@ -210,3 +210,22 @@ export async function deleteProduct(formData: FormData) {
 
   revalidateInventoryPages();
 }
+
+export async function updateProductRemark(formData: FormData) {
+  const supabase = await createClient();
+  await loadInventoryAccess(supabase);
+
+  const productId = parseUuidField(formData.get('productId'), '产品');
+  const remark = parseOptionalRemark(formData.get('remark'));
+
+  const { error } = await supabase
+    .from('products')
+    .update({ remark })
+    .eq('id', productId);
+
+  if (error) {
+    throw new Error(`更新备注失败：${error.message}`);
+  }
+
+  revalidateInventoryPages();
+}

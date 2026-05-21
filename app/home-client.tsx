@@ -1,6 +1,6 @@
 'use client';
 
-import { useDeferredValue, useMemo, useState } from 'react';
+import { useDeferredValue, useMemo, useState, useTransition } from 'react';
 import {
   Alert,
   Card,
@@ -13,9 +13,12 @@ import {
   Table,
   Tag,
   Typography,
+  message,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import useBreakpoint from 'antd/es/grid/hooks/useBreakpoint';
+import { useRouter } from 'next/navigation';
+import { updateProductRemark } from '@/app/inventory/actions';
 import type {
   InventoryAccess,
   InventoryRow,
@@ -78,6 +81,9 @@ export default function HomeClient({
   const [keyword, setKeyword] = useState('');
   const deferredKeyword = useDeferredValue(keyword);
   const [warehouseFilter, setWarehouseFilter] = useState(ALL_WAREHOUSES);
+  const [isPending, startTransition] = useTransition();
+  const [messageApi, contextHolder] = message.useMessage();
+  const router = useRouter();
 
   const warehouseOptions = useMemo(() => {
     if (!access.isAdmin) {
@@ -130,6 +136,53 @@ export default function HomeClient({
     (row) => row.stockStatus === 'OUT_OF_STOCK'
   );
 
+  function RemarkCell({ value, onSave }: { value: string | null; onSave: (newValue: string) => void }) {
+    const [editing, setEditing] = useState(false);
+    const [text, setText] = useState(value ?? '');
+
+    if (!editing) {
+      return (
+        <div
+          onClick={() => { setText(value ?? ''); setEditing(true); }}
+          style={{ cursor: 'pointer', minHeight: 24, padding: '4px 0' }}
+        >
+          {value || <Typography.Text type="secondary">-</Typography.Text>}
+        </div>
+      );
+    }
+
+    return (
+      <Input
+        size="small"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onBlur={() => { onSave(text); setEditing(false); }}
+        onPressEnter={() => { onSave(text); setEditing(false); }}
+        onKeyDown={(e) => { if (e.key === 'Escape') { setText(value ?? ''); setEditing(false); } }}
+        onClick={(e) => e.stopPropagation()}
+        maxLength={500}
+        placeholder="输入备注"
+        style={{ width: '100%' }}
+      />
+    );
+  }
+
+  function saveRemark(productId: string, oldValue: string | null, newValue: string) {
+    const trimmed = newValue.trim();
+    if (trimmed === (oldValue ?? '').trim()) return;
+    startTransition(async () => {
+      try {
+        const formData = new FormData();
+        formData.set('productId', productId);
+        formData.set('remark', trimmed);
+        await updateProductRemark(formData);
+        router.refresh();
+      } catch (error) {
+        messageApi.error(error instanceof Error ? error.message : '更新备注失败。');
+      }
+    });
+  }
+
   const inventoryColumns: ColumnsType<InventoryRow> = [
     { title: '产品型号', dataIndex: 'sku', key: 'sku', width: 140 },
     {
@@ -145,8 +198,13 @@ export default function HomeClient({
       title: '备注',
       dataIndex: 'remark',
       key: 'remark',
-      width: 160,
-      render: (text) => text || '-',
+      width: 180,
+      render: (text, row) => (
+        <RemarkCell
+          value={text}
+          onSave={(newValue) => saveRemark(row.productId, text, newValue)}
+        />
+      ),
     },
     {
       title: '状态',
@@ -193,6 +251,8 @@ export default function HomeClient({
 
   return (
     <Space orientation="vertical" size="large" style={{ width: '100%' }}>
+      {contextHolder}
+
       {loadErrorMessage ? (
         <Alert
           type="error"
@@ -277,7 +337,7 @@ export default function HomeClient({
           dataSource={filteredInventoryRows}
           virtual
           size={isMobile ? 'small' : 'middle'}
-          scroll={{ x: 1180, y: isMobile ? 360 : 520 }}
+          scroll={{ x: 1200, y: isMobile ? 360 : 520 }}
           pagination={{ pageSize: isMobile ? 6 : 10 }}
         />
       </Card>

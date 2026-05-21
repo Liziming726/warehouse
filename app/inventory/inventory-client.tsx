@@ -27,6 +27,7 @@ import {
   createProduct,
   deleteProduct,
   updateProduct,
+  updateProductRemark,
 } from '@/app/inventory/actions';
 import type {
   InventoryAccess,
@@ -57,6 +58,7 @@ type ProductFormValues = {
 };
 
 const ALL_WAREHOUSES = '__ALL__';
+const ALL_CATEGORIES = '__ALL__';
 
 const PRODUCT_CATEGORY_SELECT_OPTIONS = PRODUCT_CATEGORY_OPTIONS.map((value) => ({
   label: value,
@@ -115,6 +117,7 @@ export default function InventoryClient({
   const [productKeyword, setProductKeyword] = useState('');
   const deferredProductKeyword = useDeferredValue(productKeyword);
   const [warehouseFilter, setWarehouseFilter] = useState(ALL_WAREHOUSES);
+  const [categoryFilter, setCategoryFilter] = useState(ALL_CATEGORIES);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<ProductManageRow | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -135,6 +138,11 @@ export default function InventoryClient({
     ];
   }, [access.isAdmin, warehouses]);
 
+  const categoryOptions = useMemo(() => [
+    { label: '全部分类', value: ALL_CATEGORIES },
+    ...PRODUCT_CATEGORY_OPTIONS.map((value) => ({ label: value, value })),
+  ], []);
+
   const warehouseScopedRows = useMemo(() => {
     if (!access.isAdmin || warehouseFilter === ALL_WAREHOUSES) {
       return rows;
@@ -143,24 +151,21 @@ export default function InventoryClient({
   }, [access.isAdmin, rows, warehouseFilter]);
 
   const filteredRows = useMemo(() => {
-    const key = deferredKeyword.trim().toLowerCase();
-    if (!key) {
-      return warehouseScopedRows;
+    let result = warehouseScopedRows;
+    if (categoryFilter !== ALL_CATEGORIES) {
+      result = result.filter((row) => row.category === categoryFilter);
     }
-    return warehouseScopedRows.filter((row) =>
-      [
-        row.sku,
-        row.productName,
-        row.category,
-        row.unit,
-        row.warehouseName,
-        row.stockStatus,
-      ]
-        .join(' ')
-        .toLowerCase()
-        .includes(key)
-    );
-  }, [deferredKeyword, warehouseScopedRows]);
+    const key = deferredKeyword.trim().toLowerCase();
+    if (key) {
+      result = result.filter((row) =>
+        [row.sku, row.productName, row.category, row.unit, row.warehouseName, row.stockStatus]
+          .join(' ')
+          .toLowerCase()
+          .includes(key)
+      );
+    }
+    return result;
+  }, [deferredKeyword, warehouseScopedRows, categoryFilter]);
 
   const warehouseScopedProducts = useMemo(() => {
     if (!access.isAdmin || warehouseFilter === ALL_WAREHOUSES) {
@@ -172,23 +177,21 @@ export default function InventoryClient({
   }, [access.isAdmin, products, warehouseFilter]);
 
   const filteredProducts = useMemo(() => {
-    const key = deferredProductKeyword.trim().toLowerCase();
-    if (!key) {
-      return warehouseScopedProducts;
+    let result = warehouseScopedProducts;
+    if (categoryFilter !== ALL_CATEGORIES) {
+      result = result.filter((row) => row.category === categoryFilter);
     }
-    return warehouseScopedProducts.filter((row) =>
-      [
-        row.sku,
-        row.name,
-        row.category,
-        row.unit,
-        row.warehouseName,
-      ]
-        .join(' ')
-        .toLowerCase()
-        .includes(key)
-    );
-  }, [deferredProductKeyword, warehouseScopedProducts]);
+    const key = deferredProductKeyword.trim().toLowerCase();
+    if (key) {
+      result = result.filter((row) =>
+        [row.sku, row.name, row.category, row.unit, row.warehouseName]
+          .join(' ')
+          .toLowerCase()
+          .includes(key)
+      );
+    }
+    return result;
+  }, [deferredProductKeyword, warehouseScopedProducts, categoryFilter]);
 
   const totalSku = filteredRows.length;
   const totalQty = filteredRows.reduce((sum, row) => sum + row.currentQty, 0);
@@ -214,6 +217,53 @@ export default function InventoryClient({
   const outboundShortcutPath = shortcutWarehouseId
     ? `/outbound?warehouseId=${encodeURIComponent(shortcutWarehouseId)}`
     : '/outbound';
+
+  function RemarkCell({ value, onSave }: { value: string | null; onSave: (newValue: string) => void }) {
+    const [editing, setEditing] = useState(false);
+    const [text, setText] = useState(value ?? '');
+
+    if (!editing) {
+      return (
+        <div
+          onClick={() => { setText(value ?? ''); setEditing(true); }}
+          style={{ cursor: 'pointer', minHeight: 24, padding: '4px 0' }}
+        >
+          {value || <Typography.Text type="secondary">-</Typography.Text>}
+        </div>
+      );
+    }
+
+    return (
+      <Input
+        size="small"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onBlur={() => { onSave(text); setEditing(false); }}
+        onPressEnter={() => { onSave(text); setEditing(false); }}
+        onKeyDown={(e) => { if (e.key === 'Escape') { setText(value ?? ''); setEditing(false); } }}
+        onClick={(e) => e.stopPropagation()}
+        maxLength={500}
+        placeholder="输入备注"
+        style={{ width: '100%' }}
+      />
+    );
+  }
+
+  function saveRemark(productId: string, oldValue: string | null, newValue: string) {
+    const trimmed = newValue.trim();
+    if (trimmed === (oldValue ?? '').trim()) return;
+    startTransition(async () => {
+      try {
+        const formData = new FormData();
+        formData.set('productId', productId);
+        formData.set('remark', trimmed);
+        await updateProductRemark(formData);
+        router.refresh();
+      } catch (error) {
+        messageApi.error(error instanceof Error ? error.message : '更新备注失败。');
+      }
+    });
+  }
 
   const inventoryColumns: ColumnsType<InventoryRow> = [
     {
@@ -263,8 +313,13 @@ export default function InventoryClient({
       title: '备注',
       dataIndex: 'remark',
       key: 'remark',
-      width: 160,
-      render: (text) => text || '-',
+      width: 180,
+      render: (text, row) => (
+        <RemarkCell
+          value={text}
+          onSave={(newValue) => saveRemark(row.productId, text, newValue)}
+        />
+      ),
     },
     {
       title: '状态',
@@ -322,8 +377,13 @@ export default function InventoryClient({
       title: '备注',
       dataIndex: 'remark',
       key: 'remark',
-      width: 160,
-      render: (text) => text || '-',
+      width: 180,
+      render: (text, row) => (
+        <RemarkCell
+          value={text}
+          onSave={(newValue) => saveRemark(row.id, text, newValue)}
+        />
+      ),
     },
     {
       title: '所属仓库',
@@ -542,9 +602,15 @@ export default function InventoryClient({
                 value={warehouseFilter}
                 options={warehouseOptions}
                 onChange={setWarehouseFilter}
-                style={{ width: isMobile ? '100%' : 260 }}
+                style={{ width: isMobile ? '100%' : 220 }}
               />
             ) : null}
+            <Select
+              value={categoryFilter}
+              options={categoryOptions}
+              onChange={setCategoryFilter}
+              style={{ width: isMobile ? '100%' : 160 }}
+            />
           </Space>
 
           <Table<InventoryRow>
@@ -553,7 +619,7 @@ export default function InventoryClient({
             dataSource={filteredRows}
             virtual
             size={isMobile ? 'small' : 'middle'}
-            scroll={{ x: 1360, y: isMobile ? 380 : 560 }}
+            scroll={{ x: 1380, y: isMobile ? 380 : 560 }}
             pagination={{ pageSize: isMobile ? 8 : 12 }}
           />
         </Space>
@@ -617,7 +683,7 @@ export default function InventoryClient({
           dataSource={filteredProducts}
           virtual
           size={isMobile ? 'small' : 'middle'}
-          scroll={{ x: 1460, y: isMobile ? 360 : 520 }}
+          scroll={{ x: 1480, y: isMobile ? 360 : 520 }}
           pagination={{ pageSize: isMobile ? 8 : 10 }}
         />
       </Card>
