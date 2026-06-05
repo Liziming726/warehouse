@@ -22,6 +22,15 @@ function getScopeLabel(access: InventoryAccess) {
   return access.warehouseName ?? '未分配仓库';
 }
 
+function formatStatusDate() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  const week = ['日', '一', '二', '三', '四', '五', '六'][now.getDay()];
+  return `${y}/${m}/${d} 星期${week}`;
+}
+
 export default function WmsShell({
   title,
   subtitle,
@@ -30,7 +39,21 @@ export default function WmsShell({
   children,
 }: WmsShellProps) {
   return (
-    <div className="wms-shell">
+    <>
+      <div className="wms-status-bar">
+        <div className="wms-status-bar-left">
+          <span className="wms-status-dot" />
+          <span>远宏交通仓库管理系统</span>
+        </div>
+        <div className="wms-status-bar-right">
+          <span>{formatStatusDate()}</span>
+          <span>{access.nickname ?? access.username}</span>
+        </div>
+      </div>
+
+      <div className="wms-shell">
+        <WmsNav currentPath={currentPath} />
+
       <Space orientation="vertical" size="large" style={{ width: '100%' }}>
         <Card className="wms-hero-card">
           <div className="wms-hero">
@@ -76,10 +99,9 @@ export default function WmsShell({
           </div>
         </Card>
 
-        <WmsNav currentPath={currentPath} />
-
         {children}
       </Space>
-    </div>
+      </div>
+    </>
   );
 }

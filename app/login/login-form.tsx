@@ -67,4 +67,3 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
     </div>
   );
 }
-

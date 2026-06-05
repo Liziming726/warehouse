@@ -29,6 +29,9 @@ import {
   updateProduct,
   updateProductRemark,
 } from '@/app/inventory/actions';
+import CountUp from '@/src/components/count-up';
+import { downloadExcel } from '@/src/lib/export-excel';
+import { DownloadOutlined } from '@ant-design/icons';
 import type {
   InventoryAccess,
   InventoryRow,
@@ -542,6 +545,41 @@ export default function InventoryClient({
     }
   };
 
+  const handleExportInventory = () => {
+    downloadExcel(
+      filteredRows as unknown as Record<string, unknown>[],
+      [
+        { title: '产品型号', dataIndex: 'sku', key: 'sku' },
+        { title: '产品名称', dataIndex: 'productName', key: 'productName' },
+        { title: '产品分类', dataIndex: 'category', key: 'category' },
+        { title: '单位', dataIndex: 'unit', key: 'unit' },
+        { title: '所属仓库', dataIndex: 'warehouseName', key: 'warehouseName' },
+        { title: '当前库存', dataIndex: 'currentQty', key: 'currentQty' },
+        { title: '安全库存', dataIndex: 'safeStock', key: 'safeStock' },
+        { title: '状态', key: 'stockStatus', render: (_v, r) => formatStockStatus(r.stockStatus as string) },
+        { title: '备注', dataIndex: 'remark', key: 'remark' },
+      ],
+      `库存总览_${new Date().toISOString().slice(0, 10)}`
+    );
+  };
+
+  const handleExportProducts = () => {
+    downloadExcel(
+      filteredProducts as unknown as Record<string, unknown>[],
+      [
+        { title: '产品型号', dataIndex: 'sku', key: 'sku' },
+        { title: '产品名称', dataIndex: 'name', key: 'name' },
+        { title: '分类', dataIndex: 'category', key: 'category' },
+        { title: '单位', dataIndex: 'unit', key: 'unit' },
+        { title: '安全库存', dataIndex: 'safeStock', key: 'safeStock' },
+        { title: '备注', dataIndex: 'remark', key: 'remark' },
+        { title: '所属仓库', dataIndex: 'warehouseName', key: 'warehouseName' },
+        { title: '更新时间', dataIndex: 'updatedAt', key: 'updatedAt' },
+      ],
+      `产品清单_${new Date().toISOString().slice(0, 10)}`
+    );
+  };
+
   return (
     <Space orientation="vertical" size="large" style={{ width: '100%' }}>
       {contextHolder}
@@ -572,22 +610,22 @@ export default function InventoryClient({
       <Row gutter={16}>
         <Col xs={24} sm={12} lg={6}>
           <Card>
-            <Statistic title="产品数" value={totalSku} />
+            <Statistic title="产品数" formatter={() => <CountUp end={totalSku} />} />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
           <Card>
-            <Statistic title="库存总量" value={totalQty} />
+            <Statistic title="库存总量" formatter={() => <CountUp end={totalQty} />} />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
           <Card>
-            <Statistic title="低库存" value={lowStockCount} />
+            <Statistic title="低库存" formatter={() => <CountUp end={lowStockCount} />} />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
           <Card>
-            <Statistic title="缺货" value={outOfStockCount} />
+            <Statistic title="缺货" formatter={() => <CountUp end={outOfStockCount} />} />
           </Card>
         </Col>
       </Row>
@@ -629,6 +667,9 @@ export default function InventoryClient({
               onChange={setStatusFilter}
               style={{ width: isMobile ? '100%' : 150 }}
             />
+            <Button size="small" icon={<DownloadOutlined />} onClick={handleExportInventory}>
+              导出
+            </Button>
           </Space>
 
           <Table<InventoryRow>
@@ -672,6 +713,9 @@ export default function InventoryClient({
                 新增产品
               </Button>
             ) : null}
+            <Button size="small" icon={<DownloadOutlined />} onClick={handleExportProducts}>
+              导出
+            </Button>
           </Space>
         }
       >

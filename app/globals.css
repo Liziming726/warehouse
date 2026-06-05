@@ -4,10 +4,12 @@
   --wms-bg-0: #edf4ff;
   --wms-bg-1: #dfeeff;
   --wms-bg-2: #f6fbff;
-  --wms-surface: rgba(255, 255, 255, 0.88);
-  --wms-border: #d2def2;
+  --wms-surface: rgba(255, 255, 255, 0.72);
+  --wms-border: rgba(255, 255, 255, 0.6);
   --wms-text: #0f172a;
   --wms-muted: #51607a;
+  --glass-blur: saturate(180%) blur(20px);
+  --glass-bg: rgba(255, 255, 255, 0.55);
 }
 
 @theme inline {
@@ -37,9 +39,17 @@ body {
     "SF Pro Display", "SF Pro Text", "PingFang SC", "Hiragino Sans GB",
     "Microsoft YaHei", "Segoe UI", sans-serif;
   background:
-    radial-gradient(82rem 34rem at -10% -10%, rgba(22, 119, 255, 0.16), transparent 62%),
-    radial-gradient(56rem 26rem at 110% -20%, rgba(0, 201, 167, 0.12), transparent 60%),
-    linear-gradient(180deg, var(--wms-bg-0) 0%, var(--wms-bg-2) 58%, #fff 100%);
+    /* top-left large blue glow */
+    radial-gradient(90rem 40rem at -5% -5%, rgba(22, 119, 255, 0.22), transparent 55%),
+    /* top-right teal glow */
+    radial-gradient(60rem 30rem at 115% -8%, rgba(0, 201, 167, 0.15), transparent 55%),
+    /* bottom-right purple glow */
+    radial-gradient(50rem 28rem at 95% 95%, rgba(124, 58, 237, 0.10), transparent 55%),
+    /* bottom-left blue glow */
+    radial-gradient(40rem 24rem at -5% 100%, rgba(56, 189, 248, 0.10), transparent 55%),
+    /* base background */
+    linear-gradient(180deg, #eef4ff 0%, #f6fbff 40%, #ffffff 100%);
+  background-attachment: fixed;
 }
 
 a {
@@ -47,48 +57,80 @@ a {
   text-decoration: none;
 }
 
+/* ══════════════════════════════════════════════════════════
+   Glass Card
+   ══════════════════════════════════════════════════════════ */
+
 .ant-card {
-  border: 1px solid var(--wms-border);
-  background: var(--wms-surface);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 12px 34px rgba(16, 92, 205, 0.09);
+  border: 1px solid rgba(255, 255, 255, 0.64);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow:
+    0 2px 12px rgba(16, 92, 205, 0.07),
+    0 8px 32px rgba(16, 92, 205, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  border-radius: 20px;
 }
 
 .ant-card .ant-card-head {
-  min-height: 52px;
-  border-bottom: 1px solid #e8edf6;
+  min-height: 50px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .ant-card .ant-card-head-title {
   font-weight: 600;
   letter-spacing: 0.2px;
+  font-size: 15px;
 }
+
+/* ══════════════════════════════════════════════════════════
+   Buttons
+   ══════════════════════════════════════════════════════════ */
 
 .ant-btn {
   font-weight: 500;
   letter-spacing: 0.2px;
+  border-radius: 14px;
+  transition: all 0.25s ease;
 }
 
 .ant-btn-default {
   border-color: #d5deea;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
 }
 
 .ant-btn-default:not(:disabled):hover {
-  border-color: #b8c4d6;
-  background: #f8fbff;
+  border-color: #8bb5f0;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 4px 14px rgba(22, 119, 255, 0.15);
 }
 
 .ant-btn-primary {
-  box-shadow: 0 8px 18px rgba(22, 119, 255, 0.28);
+  background: linear-gradient(135deg, #1677ff, #3b82f6);
+  border-color: transparent;
+  box-shadow: 0 4px 16px rgba(22, 119, 255, 0.32);
 }
+
+.ant-btn-primary:not(:disabled):hover {
+  background: linear-gradient(135deg, #2563eb, #1677ff) !important;
+  box-shadow: 0 6px 22px rgba(22, 119, 255, 0.42) !important;
+}
+
+/* ══════════════════════════════════════════════════════════
+   Inputs
+   ══════════════════════════════════════════════════════════ */
 
 .ant-input,
 .ant-input-affix-wrapper,
 .ant-input-number,
 .ant-select-selector {
   border-color: #d7e0ec !important;
-  background: #fff !important;
+  background: rgba(255, 255, 255, 0.65) !important;
+  backdrop-filter: blur(8px);
+  border-radius: 14px !important;
+  transition: all 0.25s ease !important;
 }
 
 .ant-input:focus,
@@ -96,23 +138,139 @@ a {
 .ant-input-number-focused,
 .ant-select-focused .ant-select-selector {
   border-color: #1677ff !important;
-  box-shadow: 0 0 0 3px rgba(22, 119, 255, 0.18) !important;
+  box-shadow: 0 0 0 4px rgba(22, 119, 255, 0.14) !important;
 }
 
+/* ══════════════════════════════════════════════════════════
+   Table
+   ══════════════════════════════════════════════════════════ */
+
 .ant-table-wrapper .ant-table {
-  border-radius: 14px;
+  border-radius: 16px;
   overflow: hidden;
 }
 
 .ant-table-wrapper .ant-table-thead > tr > th {
-  color: #334155;
+  color: #475569;
   font-weight: 600;
+  background: rgba(248, 250, 252, 0.8);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* ══════════════════════════════════════════════════════════
+   Shell layout
+   ══════════════════════════════════════════════════════════ */
+
+/* ══════════════════════════════════════════════════════════
+   System Status Bar
+   ══════════════════════════════════════════════════════════ */
+
+.wms-status-bar {
+  height: 28px;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  color: #51607a;
+  background: rgba(255, 255, 255, 0.48);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  letter-spacing: 0.2px;
+}
+
+.wms-status-bar-left,
+.wms-status-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.wms-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.5);
+  animation: wms-status-pulse 2s ease-in-out infinite;
+}
+
+@keyframes wms-status-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
 .wms-shell {
-  padding: 18px 16px 26px;
+  padding: 0 16px 32px;
   max-width: 1320px;
   margin: 0 auto;
+}
+
+.wms-shell-main {
+  padding-top: 14px;
+}
+
+/* ══════════════════════════════════════════════════════════
+   Floating Navigation — sticky top, glass effect
+   ══════════════════════════════════════════════════════════ */
+
+.wms-nav {
+  position: sticky;
+  top: 12px;
+  z-index: 100;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin-bottom: 18px;
+  padding: 6px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.58);
+  backdrop-filter: saturate(200%) blur(28px);
+  -webkit-backdrop-filter: saturate(200%) blur(28px);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow:
+    0 2px 12px rgba(15, 23, 42, 0.06),
+    0 8px 32px rgba(15, 23, 42, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.wms-nav-link {
+  display: inline-block;
+  border-radius: 14px;
+  border: 1px solid transparent;
+  padding: 8px 18px;
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: #475569;
+  transition: all 0.25s ease;
+  white-space: nowrap;
+}
+
+.wms-nav-link:hover {
+  color: #0b4fcf;
+  background: rgba(22, 119, 255, 0.08);
+  border-color: rgba(22, 119, 255, 0.15);
+}
+
+.wms-nav-link.is-active {
+  color: #fff;
+  background: linear-gradient(135deg, #1677ff, #3b82f6);
+  border-color: transparent;
+  box-shadow:
+    0 4px 14px rgba(22, 119, 255, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+/* ══════════════════════════════════════════════════════════
+   Hero
+   ══════════════════════════════════════════════════════════ */
+
+.wms-hero-card {
+  border-radius: 22px !important;
 }
 
 .wms-hero-card .ant-card-body {
@@ -122,32 +280,31 @@ a {
 .wms-hero {
   position: relative;
   overflow: hidden;
-  padding: 22px 24px;
-  border-radius: 20px;
-  background:
-    linear-gradient(130deg, rgba(255, 255, 255, 0.96), rgba(233, 246, 255, 0.9));
+  padding: 24px 28px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(237, 244, 255, 0.7));
 }
 
 .wms-hero::before {
   content: "";
   position: absolute;
-  right: -56px;
-  top: -72px;
-  width: 240px;
-  height: 240px;
+  right: -40px;
+  top: -60px;
+  width: 220px;
+  height: 220px;
   border-radius: 999px;
-  background: radial-gradient(circle, rgba(22, 119, 255, 0.24), transparent 68%);
+  background: radial-gradient(circle, rgba(22, 119, 255, 0.28), transparent 65%);
 }
 
 .wms-hero::after {
   content: "";
   position: absolute;
-  left: -90px;
-  bottom: -90px;
-  width: 240px;
-  height: 240px;
+  left: -70px;
+  bottom: -80px;
+  width: 200px;
+  height: 200px;
   border-radius: 999px;
-  background: radial-gradient(circle, rgba(0, 201, 167, 0.2), transparent 68%);
+  background: radial-gradient(circle, rgba(0, 201, 167, 0.22), transparent 65%);
 }
 
 .wms-hero-content {
@@ -178,13 +335,13 @@ a {
 .wms-hero-subtitle {
   margin: 0;
   color: var(--wms-muted);
-  font-size: 0.96rem;
+  font-size: 0.95rem;
 }
 
 .wms-user-line {
   margin: 0;
   color: #354155;
-  font-size: 0.92rem;
+  font-size: 0.9rem;
   font-weight: 500;
 }
 
@@ -196,11 +353,14 @@ a {
 }
 
 .wms-brand-panel {
-  border-radius: 15px;
-  background: #fff;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: 0 10px 26px rgba(22, 119, 255, 0.2);
-  padding: 9px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow:
+    0 4px 16px rgba(22, 119, 255, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  padding: 10px;
 }
 
 .wms-brand-logo {
@@ -210,49 +370,77 @@ a {
   display: block;
 }
 
-.wms-nav {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-  padding: 8px;
+/* ══════════════════════════════════════════════════════════
+   Modal glass effect
+   ══════════════════════════════════════════════════════════ */
+
+.ant-modal-content {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: saturate(180%) blur(24px);
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow:
+    0 8px 40px rgba(15, 23, 42, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.ant-modal-header {
+  background: transparent;
+}
+
+/* ══════════════════════════════════════════════════════════
+   Dropdown & Select
+   ══════════════════════════════════════════════════════════ */
+
+.ant-select-dropdown {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: saturate(180%) blur(18px);
+  -webkit-backdrop-filter: saturate(180%) blur(18px);
   border-radius: 16px;
-  border: 1px solid var(--wms-border);
-  background: rgba(255, 255, 255, 0.78);
-  backdrop-filter: blur(6px);
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow:
+    0 4px 24px rgba(15, 23, 42, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 
-.wms-nav-link {
-  border-radius: 12px;
-  border: 1px solid transparent;
-  padding: 8px 15px;
-  font-size: 0.92rem;
-  color: #475569;
-  transition: all 0.2s ease;
+/* ══════════════════════════════════════════════════════════
+   Popconfirm
+   ══════════════════════════════════════════════════════════ */
+
+.ant-popover-inner {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
 }
 
-.wms-nav-link:hover {
-  color: #0b4fcf;
-  background: #ecf4ff;
-  border-color: #bfd8ff;
-}
-
-.wms-nav-link.is-active {
-  color: #fff;
-  background: linear-gradient(135deg, #1677ff, #13a2ff);
-  border-color: #1677ff;
-  box-shadow: 0 8px 16px rgba(22, 119, 255, 0.3);
-}
+/* ══════════════════════════════════════════════════════════
+   Responsive
+   ══════════════════════════════════════════════════════════ */
 
 @media (max-width: 900px) {
   .wms-shell {
-    padding: 14px 12px 20px;
+    padding: 10px 10px 24px;
+  }
+
+  .wms-nav {
+    top: 8px;
+    gap: 3px;
+    padding: 5px;
+    border-radius: 16px;
+  }
+
+  .wms-nav-link {
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    border-radius: 12px;
   }
 
   .wms-hero {
-    padding: 16px;
-    border-radius: 16px;
+    padding: 16px 18px;
+    border-radius: 18px;
   }
 
   .wms-hero-content {
