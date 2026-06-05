@@ -322,7 +322,7 @@ export async function loadProductManageRows(
   const query = supabase
     .from('products')
     .select(
-      'id,sku,name,category,unit,safe_stock,warehouse_id,status,remark,created_at,updated_at'
+      'id,sku,name,category,unit,safe_stock,warehouse_id,status,created_at,updated_at'
     )
     .order('created_at', { ascending: false });
 
