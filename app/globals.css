@@ -162,54 +162,10 @@ a {
    Shell layout
    ══════════════════════════════════════════════════════════ */
 
-/* ══════════════════════════════════════════════════════════
-   System Status Bar
-   ══════════════════════════════════════════════════════════ */
-
-.wms-status-bar {
-  height: 28px;
-  padding: 0 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 0.78rem;
-  color: #51607a;
-  background: rgba(255, 255, 255, 0.48);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
-  letter-spacing: 0.2px;
-}
-
-.wms-status-bar-left,
-.wms-status-bar-right {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.wms-status-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #22c55e;
-  box-shadow: 0 0 6px rgba(34, 197, 94, 0.5);
-  animation: wms-status-pulse 2s ease-in-out infinite;
-}
-
-@keyframes wms-status-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
 .wms-shell {
-  padding: 0 16px 32px;
+  padding: 16px 16px 32px;
   max-width: 1320px;
   margin: 0 auto;
-}
-
-.wms-shell-main {
-  padding-top: 14px;
 }
 
 /* ══════════════════════════════════════════════════════════

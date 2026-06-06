@@ -3,7 +3,6 @@
 import { useDeferredValue, useMemo, useState, useTransition } from 'react';
 import {
   Alert,
-  Button,
   Card,
   Col,
   Input,
@@ -16,14 +15,10 @@ import {
   Typography,
   message,
 } from 'antd';
-import { DownloadOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import useBreakpoint from 'antd/es/grid/hooks/useBreakpoint';
 import { useRouter } from 'next/navigation';
 import { updateMovementRemark, updateProductRemark } from '@/app/inventory/actions';
-import CountUp from '@/src/components/count-up';
-import ActivityFeed from '@/src/components/activity-feed';
-import { downloadExcel } from '@/src/lib/export-excel';
 import type {
   InventoryAccess,
   InventoryRow,
@@ -146,16 +141,6 @@ export default function HomeClient({
   );
   const outOfStockRows = filteredInventoryRows.filter(
     (row) => row.stockStatus === 'OUT_OF_STOCK'
-  );
-
-  const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
-  const todayInbound = useMemo(
-    () => inboundRows.filter((r) => r.bizDate === todayStr).length,
-    [inboundRows, todayStr]
-  );
-  const todayOutbound = useMemo(
-    () => outboundRows.filter((r) => r.bizDate === todayStr).length,
-    [outboundRows, todayStr]
   );
 
   function RemarkCell({ value, onSave }: { value: string | null; onSave: (newValue: string) => void }) {
@@ -292,56 +277,6 @@ export default function HomeClient({
     },
   ];
 
-  const handleExportInventory = () => {
-    downloadExcel(
-      filteredInventoryRows as unknown as Record<string, unknown>[],
-      [
-        { title: '产品型号', dataIndex: 'sku', key: 'sku' },
-        { title: '产品名称', dataIndex: 'productName', key: 'productName' },
-        { title: '所属仓库', dataIndex: 'warehouseName', key: 'warehouseName' },
-        { title: '当前库存', dataIndex: 'currentQty', key: 'currentQty' },
-        { title: '安全库存', dataIndex: 'safeStock', key: 'safeStock' },
-        { title: '状态', key: 'stockStatus', render: (_v, r) => formatStockStatus(r.stockStatus as string) },
-        { title: '备注', dataIndex: 'remark', key: 'remark' },
-      ],
-      `库存快照_${new Date().toISOString().slice(0, 10)}`
-    );
-  };
-
-  const handleExportInbound = () => {
-    downloadExcel(
-      inboundRows as unknown as Record<string, unknown>[],
-      [
-        { title: '业务日期', dataIndex: 'bizDate', key: 'bizDate' },
-        { title: '流水号', dataIndex: 'movementNo', key: 'movementNo' },
-        { title: '产品型号', dataIndex: 'sku', key: 'sku' },
-        { title: '产品名称', dataIndex: 'productName', key: 'productName' },
-        { title: '数量', dataIndex: 'quantity', key: 'quantity' },
-        { title: '仓库', dataIndex: 'warehouseName', key: 'warehouseName' },
-        { title: '操作人', dataIndex: 'operatorName', key: 'operatorName' },
-        { title: '备注', dataIndex: 'remark', key: 'remark' },
-      ],
-      `入库记录_${new Date().toISOString().slice(0, 10)}`
-    );
-  };
-
-  const handleExportOutbound = () => {
-    downloadExcel(
-      outboundRows as unknown as Record<string, unknown>[],
-      [
-        { title: '业务日期', dataIndex: 'bizDate', key: 'bizDate' },
-        { title: '流水号', dataIndex: 'movementNo', key: 'movementNo' },
-        { title: '产品型号', dataIndex: 'sku', key: 'sku' },
-        { title: '产品名称', dataIndex: 'productName', key: 'productName' },
-        { title: '数量', dataIndex: 'quantity', key: 'quantity' },
-        { title: '仓库', dataIndex: 'warehouseName', key: 'warehouseName' },
-        { title: '操作人', dataIndex: 'operatorName', key: 'operatorName' },
-        { title: '备注', dataIndex: 'remark', key: 'remark' },
-      ],
-      `出库记录_${new Date().toISOString().slice(0, 10)}`
-    );
-  };
-
   return (
     <Space orientation="vertical" size="large" style={{ width: '100%' }}>
       {contextHolder}
@@ -356,50 +291,24 @@ export default function HomeClient({
       ) : null}
 
       <Row gutter={[12, 12]}>
-        <Col xs={12} lg={4}>
+        <Col xs={12} lg={6}>
           <Card>
-            <Statistic title="产品数" formatter={() => <CountUp end={totalSku} />} />
+            <Statistic title="产品数" value={totalSku} />
           </Card>
         </Col>
-        <Col xs={12} lg={4}>
+        <Col xs={12} lg={6}>
           <Card>
-            <Statistic title="库存总量" formatter={() => <CountUp end={totalQty} />} />
+            <Statistic title="库存总量" value={totalQty} />
           </Card>
         </Col>
-        <Col xs={12} lg={4}>
+        <Col xs={12} lg={6}>
           <Card>
-            <Statistic
-              title="低库存"
-              value={lowStockRows.length}
-              formatter={() => <CountUp end={lowStockRows.length} />}
-            />
+            <Statistic title="低库存" value={lowStockRows.length} />
           </Card>
         </Col>
-        <Col xs={12} lg={4}>
+        <Col xs={12} lg={6}>
           <Card>
-            <Statistic
-              title="缺货"
-              value={outOfStockRows.length}
-              formatter={() => <CountUp end={outOfStockRows.length} />}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} lg={4}>
-          <Card>
-            <Statistic
-              title="今日入库"
-              valueStyle={{ color: '#1677ff' }}
-              formatter={() => <CountUp end={todayInbound} />}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} lg={4}>
-          <Card>
-            <Statistic
-              title="今日出库"
-              valueStyle={{ color: '#dc2626' }}
-              formatter={() => <CountUp end={todayOutbound} />}
-            />
+            <Statistic title="缺货" value={outOfStockRows.length} />
           </Card>
         </Col>
       </Row>
@@ -453,13 +362,6 @@ export default function HomeClient({
               onChange={setStatusFilter}
               style={{ width: isMobile ? '100%' : 150 }}
             />
-            <Button
-              size="small"
-              icon={<DownloadOutlined />}
-              onClick={handleExportInventory}
-            >
-              导出
-            </Button>
           </Space>
         }
       >
@@ -475,48 +377,29 @@ export default function HomeClient({
       </Card>
 
       <Row gutter={[12, 12]}>
-        <Col xs={24} xl={8}>
-          <Card title="实时动态">
-            <ActivityFeed inboundRows={inboundRows} outboundRows={outboundRows} max={10} />
-          </Card>
-        </Col>
-        <Col xs={24} xl={8}>
-          <Card
-            title="最新入库"
-            extra={
-              <Button size="small" icon={<DownloadOutlined />} onClick={handleExportInbound}>
-                导出
-              </Button>
-            }
-          >
+        <Col xs={24} xl={12}>
+          <Card title="最新入库">
             <Table<MovementRow>
               rowKey="id"
               columns={movementColumns}
-              dataSource={inboundRows.slice(0, 5)}
+              dataSource={inboundRows}
               virtual
               size={isMobile ? 'small' : 'middle'}
-              scroll={{ x: 1020, y: isMobile ? 260 : 360 }}
-              pagination={false}
+              scroll={{ x: 1020, y: isMobile ? 320 : 420 }}
+              pagination={{ pageSize: 5 }}
             />
           </Card>
         </Col>
-        <Col xs={24} xl={8}>
-          <Card
-            title="最新出库"
-            extra={
-              <Button size="small" icon={<DownloadOutlined />} onClick={handleExportOutbound}>
-                导出
-              </Button>
-            }
-          >
+        <Col xs={24} xl={12}>
+          <Card title="最新出库">
             <Table<MovementRow>
               rowKey="id"
               columns={movementColumns}
-              dataSource={outboundRows.slice(0, 5)}
+              dataSource={outboundRows}
               virtual
               size={isMobile ? 'small' : 'middle'}
-              scroll={{ x: 1020, y: isMobile ? 260 : 360 }}
-              pagination={false}
+              scroll={{ x: 1020, y: isMobile ? 320 : 420 }}
+              pagination={{ pageSize: 5 }}
             />
           </Card>
         </Col>
