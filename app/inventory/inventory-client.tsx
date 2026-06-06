@@ -179,31 +179,16 @@ export default function InventoryClient({
     return result;
   }, [deferredKeyword, warehouseScopedRows, categoryFilter, statusFilter]);
 
-  const warehouseScopedProducts = useMemo(() => {
-    if (!access.isAdmin || warehouseFilter === ALL_WAREHOUSES) {
-      return products;
-    }
-    return products.filter(
-      (row) => !row.warehouseId || row.warehouseId === warehouseFilter
-    );
-  }, [access.isAdmin, products, warehouseFilter]);
-
   const filteredProducts = useMemo(() => {
-    let result = warehouseScopedProducts;
-    if (categoryFilter !== ALL_CATEGORIES) {
-      result = result.filter((row) => row.category === categoryFilter);
-    }
     const key = deferredProductKeyword.trim().toLowerCase();
-    if (key) {
-      result = result.filter((row) =>
-        [row.sku, row.name, row.category, row.unit, row.warehouseName]
-          .join(' ')
-          .toLowerCase()
-          .includes(key)
-      );
-    }
-    return result;
-  }, [deferredProductKeyword, warehouseScopedProducts, categoryFilter]);
+    if (!key) return products;
+    return products.filter((row) =>
+      [row.sku, row.name, row.category, row.unit, row.warehouseName]
+        .join(' ')
+        .toLowerCase()
+        .includes(key)
+    );
+  }, [deferredProductKeyword, products]);
 
   const totalSku = filteredRows.length;
   const totalQty = filteredRows.reduce((sum, row) => sum + row.currentQty, 0);

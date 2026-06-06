@@ -80,10 +80,10 @@ function parseOptionalRemark(value: FormDataEntryValue | null) {
 }
 
 function revalidateInventoryPages() {
-  revalidatePath('/');
-  revalidatePath('/inventory');
-  revalidatePath('/inbound');
-  revalidatePath('/outbound');
+  try { revalidatePath('/'); } catch {}
+  try { revalidatePath('/inventory'); } catch {}
+  try { revalidatePath('/inbound'); } catch {}
+  try { revalidatePath('/outbound'); } catch {}
 }
 
 function mapProductWriteError(message: string, action: '新增' | '更新') {

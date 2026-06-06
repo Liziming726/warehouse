@@ -38,10 +38,10 @@ export default async function InventoryPage() {
   let warehouses: WarehouseOption[] = [];
   let loadErrorMessage: string | null = null;
 
+  // Load inventory and warehouses together
   try {
-    [rows, products, warehouses] = await Promise.all([
+    [rows, warehouses] = await Promise.all([
       loadInventoryRows(supabase, access),
-      loadProductManageRows(supabase, access),
       loadWarehouseOptions(supabase, access),
     ]);
   } catch (error) {
@@ -51,6 +51,15 @@ export default async function InventoryPage() {
       loadErrorMessage = error.message;
     } else {
       loadErrorMessage = '加载库存页面时发生未知错误。';
+    }
+  }
+
+  // Load products separately so a failure here doesn't break the whole page
+  try {
+    products = await loadProductManageRows(supabase, access);
+  } catch (error) {
+    if (!loadErrorMessage) {
+      loadErrorMessage = error instanceof Error ? error.message : '加载产品列表失败。';
     }
   }
 
